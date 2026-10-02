@@ -34,6 +34,11 @@ PixelShaderOutput main(VertexShaderOutput input)
     
     float4 transformedUV = mul(float32_t4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
     float32_t4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
+    
+    if (textureColor.a <= 0.5f)
+    {
+        discard;
+    }
 
     // ＝★ 【スライドの通り変更】ライティング計算の追加 ＝
     if (gMaterial.enableLighting != 0)
@@ -45,7 +50,9 @@ PixelShaderOutput main(VertexShaderOutput input)
         float32_t cos = pow(NdotL * 0.5f + 0.5f, 2.0f);
         
         // テクスチャ、マテリアル、ライトの色、当たり具合（cos）、明るさをすべて掛け合わせる
-        output.color = gMaterial.color * textureColor * gDirectionalLight.color * cos * gDirectionalLight.intensity;
+        output.color.rgb = gMaterial.color.rgb * textureColor.rgb
+    * gDirectionalLight.color.rgb * cos * gDirectionalLight.intensity;
+        output.color.a = gMaterial.color.a * textureColor.a;
     }
     else
     { // Lightingしない場合（Spriteなど。前回までと同じ演算）

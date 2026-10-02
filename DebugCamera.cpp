@@ -2,6 +2,9 @@
 #include "Input.h"
 #include <cmath>
 #include <algorithm>
+#ifdef USE_IMGUI
+#include "externals/imgui/imgui.h"
+#endif
 
 void DebugCamera::Initialize(Input* input) {
     input_ = input;
@@ -14,6 +17,16 @@ void DebugCamera::Initialize(Input* input) {
 }
 
 void DebugCamera::Update() {
+
+    bool wantCaptureMouse = false;
+    bool wantCaptureKeyboard = false;
+
+#ifdef USE_IMGUI
+    const ImGuiIO& io = ImGui::GetIO();
+    wantCaptureMouse = io.WantCaptureMouse;
+    wantCaptureKeyboard = io.WantCaptureKeyboard;
+#endif
+
     // ==================================================
     // ① マウス移動量の計算
     // ==================================================
@@ -30,7 +43,7 @@ void DebugCamera::Update() {
     // ==================================================
     // ②-1 【左クリックドラッグ】カメラ自身を中心に回転（自転 / その場で首振り）
     // ==================================================
-    if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) {
+    if (!wantCaptureMouse && (GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
         rotation_.y += deltaX * rotSpeed; // 左右に首を振る
         rotation_.x += deltaY * rotSpeed; // 上下に首を振る
 
@@ -45,7 +58,7 @@ void DebugCamera::Update() {
     // ==================================================
     // ②-2 【右クリックドラッグ】中央のオブジェクトを中心に回り込む（公転 / オービット）
     // ==================================================
-    if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) {
+    if (!wantCaptureMouse && (GetAsyncKeyState(VK_RBUTTON) & 0x8000)) {
         rotation_.y += deltaX * rotSpeed; // 左右回り込み
         rotation_.x += deltaY * rotSpeed; // 上下回り込み
 
@@ -64,8 +77,8 @@ void DebugCamera::Update() {
     // ③ W / S キーによるズームイン・ズームアウト（距離の変更）
     // ==================================================
     const float zoomSpeed = 0.2f;
-    if (GetAsyncKeyState('W') & 0x8000) { distance_ -= zoomSpeed; } // 近づく
-    if (GetAsyncKeyState('S') & 0x8000) { distance_ += zoomSpeed; } // 離れる
+    if (!wantCaptureKeyboard && (GetAsyncKeyState('W') & 0x8000)) { distance_ -= zoomSpeed; } // 近づく
+    if (!wantCaptureKeyboard && (GetAsyncKeyState('S') & 0x8000)) { distance_ += zoomSpeed; } // 離れる
     if (distance_ < 1.0f) { distance_ = 1.0f; }                     // 最小距離制限
 
     // ==================================================
@@ -76,4 +89,5 @@ void DebugCamera::Update() {
 
     // ワールド行列の逆行列を計算してビュー行列にセット
     viewMatrix_ = Inverse(cameraWorldMatrix);
+
 }

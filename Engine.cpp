@@ -374,6 +374,16 @@ void Engine::InitializePipeline() {
     D3D12_BLEND_DESC blendDesc{};
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+    blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+
+
     D3D12_RASTERIZER_DESC rasterizerDesc{};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
@@ -408,11 +418,18 @@ void Engine::InitializePipeline() {
 
 void Engine::InitializeResources() {
     // 1. Plane モデル読み込み
-    modelData_ = LoadObjFile("resources", "plane.obj");
+    modelData_ = LoadObjFile("resources/fence", "fence.obj");
     vertexResourcePlane_ = CreateBufferResource(sizeof(VertexData) * modelData_.vertices.size());
     vertexBufferViewPlane_.BufferLocation = vertexResourcePlane_->GetGPUVirtualAddress();
     vertexBufferViewPlane_.SizeInBytes = UINT(sizeof(VertexData) * modelData_.vertices.size());
     vertexBufferViewPlane_.StrideInBytes = sizeof(VertexData);
+
+    for (VertexData& vertex : modelData_.vertices) {
+        vertex.position.x *= -1.0f;
+        vertex.position.z *= -1.0f;
+        vertex.normal.x *= -1.0f;
+        vertex.normal.z *= -1.0f;
+    }
 
     VertexData* vertexDataPlane = nullptr;
     vertexResourcePlane_->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataPlane));
@@ -649,7 +666,7 @@ void Engine::Run() {
 
 void Engine::Update() {
     input.Update();
-    debugCamera_.Update();
+    
 
     if (input.PushKey(DIK_0)) {
         OutputDebugStringA("Hit 0\n"); // 出力ウィンドウに「Hit 0」と表示されるかテスト
@@ -711,6 +728,9 @@ void Engine::Update() {
     transform_.rotate.z = modelRotateDeg_.z * (std::numbers::pi_v<float> / 180.0f);
 #endif
 
+    debugCamera_.Update();
+
+
     Matrix4x4 uvTransformMatrix = MakeAffineMatrix(uvTransformSprite_.scale, uvTransformSprite_.rotate, uvTransformSprite_.translate);
     materialDataSprite_->uvTransform = uvTransformMatrix;
 
@@ -763,8 +783,15 @@ void Engine::Draw() {
     commandList_->SetPipelineState(graphicsPipelineState_.Get());
     commandList_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    commandList_->IASetVertexBuffers(0, 1, &vertexBufferViewSphere_);
-    commandList_->DrawInstanced(kNumSphereVertices_, 1, 0, 0);
+    if (drawSphere_) {
+        // チェックが入っているときは球を描画する
+        commandList_->IASetVertexBuffers(0, 1, &vertexBufferViewSphere_);
+        commandList_->DrawInstanced(kNumSphereVertices_, 1, 0, 0);
+    } else {
+        // チェックが外れているときは plane.obj の四角形を描画する
+        commandList_->IASetVertexBuffers(0, 1, &vertexBufferViewPlane_);
+        commandList_->DrawInstanced(static_cast<UINT>(modelData_.vertices.size()), 1, 0, 0);
+    }
 
    
 

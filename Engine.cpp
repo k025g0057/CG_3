@@ -1,7 +1,7 @@
-// ★ 1. まずマクロを定義する
-#define USE_IMGUI 
+#ifdef _DEBUG
+#define USE_IMGUI
+#endif
 
-// ★ 2. その後に Engine.h を読み込む
 #include "Engine.h"
 
 // ★ 3. ImGuiに必要なヘッダーファイルとWndProcハンドラを読み込む

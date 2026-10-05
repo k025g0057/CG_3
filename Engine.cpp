@@ -418,7 +418,7 @@ void Engine::InitializePipeline() {
 
 void Engine::InitializeResources() {
     // 1. Plane モデル読み込み
-    modelData_ = LoadObjFile("resources/fence", "fence.obj");
+    modelData_ = LoadObjFile("resources", "plane.obj"); //modelData_ = LoadObjFile("resources/fence", "fence.obj");フェンスだったらこっちに変える
     vertexResourcePlane_ = CreateBufferResource(sizeof(VertexData) * modelData_.vertices.size());
     vertexBufferViewPlane_.BufferLocation = vertexResourcePlane_->GetGPUVirtualAddress();
     vertexBufferViewPlane_.SizeInBytes = UINT(sizeof(VertexData) * modelData_.vertices.size());

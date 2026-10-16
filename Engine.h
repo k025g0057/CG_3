@@ -156,6 +156,7 @@ private:
     ComPtr<IDxcCompiler3> dxcCompiler_;
     ComPtr<IDxcIncludeHandler> includeHandler_;
     ComPtr<ID3D12RootSignature> rootSignature_;
+    ComPtr<ID3D12RootSignature> particleRootSignature_;
     ComPtr<ID3D12PipelineState> graphicsPipelineState_;
 
     // 描画リソース・状態
@@ -181,6 +182,11 @@ private:
     ComPtr<ID3D12Resource> wvpResource_;
     TransformationMatrix* wvpData_ = nullptr;
 
+    ComPtr<ID3D12Resource> instancingResource_;
+    TransformationMatrix* instancingData_ = nullptr;
+
+    static constexpr uint32_t kNumInstance = 10;
+
     ComPtr<ID3D12Resource> transformationMatrixResourceSprite_;
     TransformationMatrix* transformationMatrixDataSprite_ = nullptr;
 
@@ -189,6 +195,8 @@ private:
 
     ComPtr<ID3D12Resource> textureResource_;
     D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU_{};
+
+    D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU_{};
 
     ComPtr<ID3D12Resource> textureResource2_;
     D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2_{};
@@ -217,4 +225,6 @@ private:
     Input input;
 
     DebugCamera debugCamera_;
+
+    ComPtr<ID3D12PipelineState> particlePipelineState_;
 };

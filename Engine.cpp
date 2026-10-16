@@ -356,6 +356,65 @@ void Engine::InitializePipeline() {
     hr = device_->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature_));
     assert(SUCCEEDED(hr));
 
+    // -------------------------------------------------------------------
+    // Particle (インスタンシング) 用ルートシグネチャの構築
+    // -------------------------------------------------------------------
+    D3D12_DESCRIPTOR_RANGE descriptorRangeForInstancing[1]{};
+    descriptorRangeForInstancing[0].BaseShaderRegister = 0;
+    descriptorRangeForInstancing[0].NumDescriptors = 1;
+    descriptorRangeForInstancing[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; // ★重複を削除し1回のみに修正
+    descriptorRangeForInstancing[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER particleRootParameters[4]{};
+
+    // [0] マテリアル (Pixel Shader - b0)
+    particleRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    particleRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    particleRootParameters[0].Descriptor.ShaderRegister = 0;
+
+    // [1] インスタンシング用 StructuredBuffer SRV (Vertex Shader - t0)
+    particleRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    particleRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    particleRootParameters[1].DescriptorTable.pDescriptorRanges = descriptorRangeForInstancing;
+    particleRootParameters[1].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeForInstancing);
+
+    // [2] テクスチャ SRV (Pixel Shader - t0)
+    particleRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    particleRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    particleRootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
+    particleRootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
+
+    // [3] 平行光源 (Pixel Shader - b1)
+    particleRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    particleRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    particleRootParameters[3].Descriptor.ShaderRegister = 1;
+
+    descriptionRootSignature.pParameters = particleRootParameters;
+    descriptionRootSignature.NumParameters = _countof(particleRootParameters);
+
+    hr = D3D12SerializeRootSignature(
+        &descriptionRootSignature,
+        D3D_ROOT_SIGNATURE_VERSION_1,
+        &signatureBlob,
+        &errorBlob
+    );
+    if (FAILED(hr)) {
+        Log(logStream_, reinterpret_cast<char*>(errorBlob->GetBufferPointer()));
+        assert(false);
+    }
+
+    hr = device_->CreateRootSignature(
+        0,
+        signatureBlob->GetBufferPointer(),
+        signatureBlob->GetBufferSize(),
+        IID_PPV_ARGS(&particleRootSignature_)
+    );
+    assert(SUCCEEDED(hr));
+
+
+    // -------------------------------------------------------------------
+    // 通常オブジェクト(Object3D)用 PSO の作成
+    // -------------------------------------------------------------------
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
     inputElementDescs[0].SemanticName = "POSITION";
     inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -373,16 +432,13 @@ void Engine::InitializePipeline() {
 
     D3D12_BLEND_DESC blendDesc{};
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
     blendDesc.RenderTarget[0].BlendEnable = TRUE;
     blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
     blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
     blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-
     blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
     blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-
 
     D3D12_RASTERIZER_DESC rasterizerDesc{};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
@@ -413,6 +469,21 @@ void Engine::InitializePipeline() {
     graphicsPipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
 
     hr = device_->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState_));
+    assert(SUCCEEDED(hr));
+
+
+    // -------------------------------------------------------------------
+    // ★ 追加：Particle (インスタンシング) 用 PSO の作成
+    // -------------------------------------------------------------------
+    ComPtr<IDxcBlob> particleVSBlob = CompileShader(L"Particle.VS.hlsl", L"vs_6_0");
+    ComPtr<IDxcBlob> particlePSBlob = CompileShader(L"Particle.PS.hlsl", L"ps_6_0");
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC particlePsoDesc = graphicsPipelineStateDesc;
+    particlePsoDesc.pRootSignature = particleRootSignature_.Get(); // インスタンシング用のルートシグネチャをセット
+    particlePsoDesc.VS = { particleVSBlob->GetBufferPointer(), particleVSBlob->GetBufferSize() };
+    particlePsoDesc.PS = { particlePSBlob->GetBufferPointer(), particlePSBlob->GetBufferSize() };
+
+    hr = device_->CreateGraphicsPipelineState(&particlePsoDesc, IID_PPV_ARGS(&particlePipelineState_));
     assert(SUCCEEDED(hr));
 }
 
@@ -516,6 +587,17 @@ void Engine::InitializeResources() {
     wvpData_->wvp = MakeIdentity4x4();
     wvpData_->World = MakeIdentity4x4();
 
+    instancingResource_ =
+        CreateBufferResource(sizeof(TransformationMatrix) * kNumInstance);
+
+    instancingResource_->Map(
+        0, nullptr, reinterpret_cast<void**>(&instancingData_));
+
+    for (uint32_t index = 0; index < kNumInstance; ++index) {
+        instancingData_[index].wvp = MakeIdentity4x4();
+        instancingData_[index].World = MakeIdentity4x4();
+    }
+
     transformationMatrixResourceSprite_ = CreateBufferResource(sizeof(TransformationMatrix));
     transformationMatrixResourceSprite_->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixDataSprite_));
     transformationMatrixDataSprite_->wvp = MakeIdentity4x4();
@@ -618,6 +700,7 @@ void Engine::InitializeResources() {
     if (fence_->GetCompletedValue() < fenceValue_) {
         fence_->SetEventOnCompletion(fenceValue_, fenceEvent_);
         WaitForSingleObject(fenceEvent_, INFINITE);
+        D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU_{};
     }
     commandAllocator_->Reset();
     commandList_->Reset(commandAllocator_.Get(), nullptr);
@@ -631,6 +714,28 @@ void Engine::InitializeResources() {
     D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU2 = GetCPUDescriptorHandle(srvDescriptorHeap_, descriptorSizeSRV_, 2);
     textureSrvHandleGPU2_ = GetGPUDescriptorHandle(srvDescriptorHeap_, descriptorSizeSRV_, 2);
     device_->CreateShaderResourceView(textureResource2_.Get(), &srvDesc2, textureSrvHandleCPU2);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC instancingSrvDesc{};
+    instancingSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    instancingSrvDesc.Shader4ComponentMapping =
+        D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    instancingSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    instancingSrvDesc.Buffer.FirstElement = 0;
+    instancingSrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+    instancingSrvDesc.Buffer.NumElements = kNumInstance;
+    instancingSrvDesc.Buffer.StructureByteStride =
+        sizeof(TransformationMatrix);
+
+    D3D12_CPU_DESCRIPTOR_HANDLE instancingSrvHandleCPU =
+        GetCPUDescriptorHandle(srvDescriptorHeap_, descriptorSizeSRV_, 3);
+    instancingSrvHandleGPU_ =
+        GetGPUDescriptorHandle(srvDescriptorHeap_, descriptorSizeSRV_, 3);
+
+    device_->CreateShaderResourceView(
+        instancingResource_.Get(),
+        &instancingSrvDesc,
+        instancingSrvHandleCPU
+    );
 }
 
 void Engine::InitializeImGui() {
@@ -665,11 +770,24 @@ void Engine::Run() {
 }
 
 void Engine::Update() {
+
+    Transform transforms[kNumInstance];
+
+    for (uint32_t index = 0; index < kNumInstance; ++index) {
+        transforms[index].scale = { 1.0f, 1.0f, 1.0f };
+        transforms[index].rotate = { 0.0f, 0.0f, 0.0f };
+        // 画像のように奥（Z方向）および右上・左下にずらして配置
+        transforms[index].translate = {
+            index * 0.15f,
+            index * -0.1f,
+            index * 0.5f
+        };
+    }
+
     input.Update();
-    
 
     if (input.PushKey(DIK_0)) {
-        OutputDebugStringA("Hit 0\n"); // 出力ウィンドウに「Hit 0」と表示されるかテスト
+        OutputDebugStringA("Hit 0\n");
     }
 
 #ifdef USE_IMGUI
@@ -738,6 +856,20 @@ void Engine::Update() {
     Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform_.scale, cameraTransform_.rotate, cameraTransform_.translate);
     Matrix4x4 viewMatrix = debugCamera_.GetViewMatrix();
 
+    for (uint32_t index = 0; index < kNumInstance; ++index) {
+        Matrix4x4 worldMatrix = MakeAffineMatrix(
+            transforms[index].scale,
+            transforms[index].rotate,
+            transforms[index].translate
+        );
+
+        Matrix4x4 worldViewProjectionMatrix =
+            Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix_));
+
+        instancingData_[index].wvp = worldViewProjectionMatrix;
+        instancingData_[index].World = worldMatrix;
+    }
+
     wvpData_->wvp = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix_));
     wvpData_->World = worldMatrix;
 
@@ -784,16 +916,35 @@ void Engine::Draw() {
     commandList_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     if (drawSphere_) {
-        // チェックが入っているときは球を描画する
+        // チェックが入っているときは球を描画（通常PSO）
+        commandList_->SetGraphicsRootSignature(rootSignature_.Get());
+        commandList_->SetPipelineState(graphicsPipelineState_.Get());
+
+        commandList_->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
+        commandList_->SetGraphicsRootConstantBufferView(1, wvpResource_->GetGPUVirtualAddress());
+        commandList_->SetGraphicsRootDescriptorTable(2, useMonsterBall_ ? textureSrvHandleGPU2_ : textureSrvHandleGPU_);
+        commandList_->SetGraphicsRootConstantBufferView(3, directionalLightResource_->GetGPUVirtualAddress());
+
+        commandList_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         commandList_->IASetVertexBuffers(0, 1, &vertexBufferViewSphere_);
         commandList_->DrawInstanced(kNumSphereVertices_, 1, 0, 0);
-    } else {
-        // チェックが外れているときは plane.obj の四角形を描画する
-        commandList_->IASetVertexBuffers(0, 1, &vertexBufferViewPlane_);
-        commandList_->DrawInstanced(static_cast<UINT>(modelData_.vertices.size()), 1, 0, 0);
     }
+    else {
+        // チェックが外れているときは 10個の板をインスタンシング描画（Particle PSO）
+        commandList_->SetGraphicsRootSignature(particleRootSignature_.Get());
+        commandList_->SetPipelineState(particlePipelineState_.Get());
 
-   
+        commandList_->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
+        commandList_->SetGraphicsRootDescriptorTable(1, instancingSrvHandleGPU_);
+        commandList_->SetGraphicsRootDescriptorTable(2, useMonsterBall_ ? textureSrvHandleGPU2_ : textureSrvHandleGPU_);
+        commandList_->SetGraphicsRootConstantBufferView(3, directionalLightResource_->GetGPUVirtualAddress());
+
+        commandList_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList_->IASetVertexBuffers(0, 1, &vertexBufferViewPlane_);
+
+        // 10インスタンス描画
+        commandList_->DrawInstanced(static_cast<UINT>(modelData_.vertices.size()), kNumInstance, 0, 0);
+    }
 
 #ifdef USE_IMGUI
     ImGui::Render();

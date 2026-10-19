@@ -1,8 +1,9 @@
 #pragma once
 
-#define DIRECTINPUT_VERSION 0x0800 // DirectInputのバージョン指定
+#define DIRECTINPUT_VERSION 0x0800
 
-#include <windows.h> // ★ Windowsの基本型（HINSTANCE, HWNDなど）を読み込む
+#include <Windows.h>
+#include <wrl.h>
 #include <dinput.h>
 #include <cassert>
 
@@ -11,16 +12,13 @@
 
 class Input {
 public:
-    // 初期化関数
     void Initialize(HINSTANCE hInstance, HWND hwnd);
-
     void Update();
-
     bool PushKey(BYTE keyNumber);
 
 private:
-    IDirectInput8* directInput = nullptr;
-    IDirectInputDevice8* keyboard = nullptr;
+    Microsoft::WRL::ComPtr<IDirectInput8> directInput;
+    Microsoft::WRL::ComPtr<IDirectInputDevice8> keyboard;
 
     BYTE key[256] = {};
 };

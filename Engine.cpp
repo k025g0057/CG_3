@@ -786,7 +786,7 @@ void Engine::Update() {
 
     input.Update();
 
-    if (input.PushKey(DIK_0)) {
+    if (input.TriggerKey(DIK_0)) {
         OutputDebugStringA("Hit 0\n");
     }
 

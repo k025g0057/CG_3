@@ -1,5 +1,6 @@
 #include "Input.h"
 #include<cassert>
+#include <cstring>
 
 void Input::Initialize(HINSTANCE hInstance, HWND hwnd) {
     HRESULT hr;
@@ -28,6 +29,7 @@ void Input::Initialize(HINSTANCE hInstance, HWND hwnd) {
 }
 
 void Input::Update() {
+    std::memcpy(keyPre, key, sizeof(key));
     keyboard->Acquire();
     keyboard->GetDeviceState(sizeof(key), key);
 }
@@ -39,4 +41,11 @@ bool Input::PushKey(BYTE keyNumber) {
     }
     // 押されていなければ false を返す
     return false;
+}
+
+bool Input::TriggerKey(BYTE keyNumber) {
+    const bool wasPressed = (keyPre[keyNumber] & 0x80) != 0;
+    const bool isPressed = (key[keyNumber] & 0x80) != 0;
+
+    return !wasPressed && isPressed;
 }

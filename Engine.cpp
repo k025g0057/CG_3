@@ -3,6 +3,24 @@
 #endif
 
 #include "Engine.h"
+#include "Input.h"
+
+#include <cassert>
+#include <chrono>
+#include <dbghelp.h>
+#include <filesystem>
+#include <format>
+#include <numbers>
+#include <sstream>
+#include <strsafe.h>
+#include <dxgidebug.h>
+#include "externals/DirectXTex/d3dx12.h"
+
+#ifdef USE_IMGUI
+#include "externals/imgui/imgui.h"
+#include "externals/imgui/imgui_impl_dx12.h"
+#include "externals/imgui/imgui_impl_win32.h"
+#endif
 
 // ★ 3. ImGuiに必要なヘッダーファイルとWndProcハンドラを読み込む
 #ifdef USE_IMGUI
@@ -135,10 +153,9 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, int32_t width, int32_
     kClientHeight_ = height;
 
     SetUnhandledExceptionFilter(ExportDump);
-    CoInitializeEx(0, COINIT_MULTITHREADED);
 
     InitializeLog();
-    InitializeWindow(hInstance, nCmdShow);
+    winApp_.Initialize(hInstance, nCmdShow, kClientWidth_, kClientHeight_, WindowProc);
     InitializeDirectX();
     InitializePipeline();
     InitializeResources();
@@ -149,7 +166,7 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, int32_t width, int32_
     soundData1 = sound.SoundLoadWave("Resources/botan.wav");
 
     input = new Input();
-    input->Initialize(wc_.hInstance, hwnd_);
+    input->Initialize(hInstance, winApp_.GetHwnd());
     debugCamera_.Initialize(input);
 }
 
@@ -163,32 +180,6 @@ void Engine::InitializeLog() {
     logStream_.open(logFilePath);
 
     Log(logStream_, "Application Started");
-}
-
-void Engine::InitializeWindow(HINSTANCE hInstance, int nCmdShow) {
-    wc_.lpfnWndProc = WindowProc;
-    wc_.lpszClassName = L"CG2WindowClass";
-    wc_.hInstance = hInstance;
-    wc_.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    RegisterClass(&wc_);
-
-    RECT wrc = { 0, 0, kClientWidth_, kClientHeight_ };
-    AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
-
-    hwnd_ = CreateWindow(
-        wc_.lpszClassName,
-        L"CG2",
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
-        wrc.right - wrc.left,
-        wrc.bottom - wrc.top,
-        nullptr,
-        nullptr,
-        wc_.hInstance,
-        nullptr);
-    
-    ShowWindow(hwnd_, nCmdShow);
 }
 
 void Engine::InitializeDirectX() {
@@ -247,7 +238,7 @@ void Engine::InitializeDirectX() {
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.BufferCount = 2;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    hr = dxgiFactory_->CreateSwapChainForHwnd(commandQueue_.Get(), hwnd_, &swapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(swapChain_.GetAddressOf()));
+    hr = dxgiFactory_->CreateSwapChainForHwnd(commandQueue_.Get(), winApp_.GetHwnd(), &swapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(swapChain_.GetAddressOf()));
     assert(SUCCEEDED(hr));
 
     rtvDescriptorHeap_ = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
@@ -744,7 +735,7 @@ void Engine::InitializeImGui() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
-    ImGui_ImplWin32_Init(hwnd_);
+    ImGui_ImplWin32_Init(winApp_.GetHwnd());
     ImGui_ImplDX12_Init(device_.Get(),
         2,
         DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,

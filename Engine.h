@@ -222,7 +222,7 @@ private:
     Sound sound;
     SoundData soundData1;
 
-    Input input;
+    Input* input = nullptr;
 
     DebugCamera debugCamera_;
 

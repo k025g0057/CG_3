@@ -148,8 +148,9 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, int32_t width, int32_
     sound.Initialize();
     soundData1 = sound.SoundLoadWave("Resources/botan.wav");
 
-    input.Initialize(wc_.hInstance, hwnd_);
-    debugCamera_.Initialize(&input);
+    input = new Input();
+    input->Initialize(wc_.hInstance, hwnd_);
+    debugCamera_.Initialize(input);
 }
 
 void Engine::InitializeLog() {
@@ -784,9 +785,9 @@ void Engine::Update() {
         };
     }
 
-    input.Update();
+    input->Update();
 
-    if (input.TriggerKey(DIK_0)) {
+    if (input->TriggerKey(DIK_0)) {
         OutputDebugStringA("Hit 0\n");
     }
 
@@ -978,7 +979,8 @@ void Engine::Draw() {
 }
 
 void Engine::Finalize() {
-
+    delete input;
+    input = nullptr;
     sound.Finalize();
 
     sound.SoundUnload(&soundData1);

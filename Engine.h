@@ -3,36 +3,21 @@
 #include <Windows.h>
 #include <cstdint>
 #include <string>
-#include <filesystem>
 #include <fstream>   
-#include <chrono>
 #include <d3d12.h>
 #include <dxgi1_6.h>
-#include <cassert>
-#include <dbghelp.h>
-#include <strsafe.h>
-#include <format>
-#include <dxgidebug.h>
 #include <dxcapi.h>
 #include "externals/DirectXTex/DirectXTex.h"
-#include "externals/DirectXTex/d3dx12.h"
 #include <vector>
-#include <numbers>
-#include <sstream>
 #include <wrl.h>
 #include "Sound.h"
-#include "Input.h"
+#include "WInApp.h"
 #include "MathTypes.h"
 #include "DebugCamera.h"
 
 using Microsoft::WRL::ComPtr;
 
-#ifdef USE_IMGUI
-#include "externals/imgui/imgui.h"
-#include "externals/imgui/imgui_impl_dx12.h"
-#include "externals/imgui/imgui_impl_win32.h"
-#endif
-
+class Input;
 
 struct Material {
     Vector4 color;
@@ -92,7 +77,6 @@ public:
 
 private:
     // 内部初期化ステップ
-    void InitializeWindow(HINSTANCE hInstance, int nCmdShow);
     void InitializeLog();
     void InitializeDirectX();
     void InitializePipeline();
@@ -119,8 +103,7 @@ private:
 
 private:
     // ウィンドウ関連
-    HWND hwnd_ = nullptr;
-    WNDCLASS wc_{};
+    WinApp winApp_;
     int32_t kClientWidth_ = 1280;
     int32_t kClientHeight_ = 720;
 

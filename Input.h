@@ -15,10 +15,14 @@ public:
     void Initialize(HINSTANCE hInstance, HWND hwnd);
     void Update();
     bool PushKey(BYTE keyNumber);
+    bool TriggerKey(BYTE keyNumber);
 
 private:
     Microsoft::WRL::ComPtr<IDirectInput8> directInput;
     Microsoft::WRL::ComPtr<IDirectInputDevice8> keyboard;
 
-    BYTE key[256] = {};
+    BYTE key[256] = {};     
+    BYTE keyPre[256] = {};  
+
+   
 };

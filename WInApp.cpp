@@ -35,3 +35,8 @@ void WinApp::Initialize(HINSTANCE hInstance, int nCmdShow, WNDPROC windowProc) {
 
 void WinApp::Update() {
 }
+
+void WinApp::Finalize() {
+    CloseWindow(hwnd_);
+    CoUninitialize();
+}

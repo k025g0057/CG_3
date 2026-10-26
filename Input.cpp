@@ -1,12 +1,14 @@
 #include "Input.h"
+#include "WinApp.h"
 #include<cassert>
 #include <cstring>
 
-void Input::Initialize(HINSTANCE hInstance, HWND hwnd) {
+void Input::Initialize(WinApp* winApp) {
+    winApp_ = winApp;
     HRESULT hr;
 
     hr = DirectInput8Create(
-        hInstance,
+        winApp_->GetHInstance(),
         DIRECTINPUT_VERSION,
         IID_IDirectInput8,
         reinterpret_cast<void**>(directInput.ReleaseAndGetAddressOf()),
@@ -23,7 +25,7 @@ void Input::Initialize(HINSTANCE hInstance, HWND hwnd) {
     assert(SUCCEEDED(hr));
 
     hr = keyboard->SetCooperativeLevel(
-        hwnd,
+        winApp_->GetHwnd(),
         DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
     assert(SUCCEEDED(hr));
 }

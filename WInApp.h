@@ -10,6 +10,7 @@ public:
 
     void Initialize(HINSTANCE hInstance, int nCmdShow, WNDPROC windowProc);
     void Update();
+    void Finalize();
 
     HWND GetHwnd() const { return hwnd_; }
     HINSTANCE GetHInstance() const { return wc_.hInstance; }

@@ -175,7 +175,7 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow) {
     soundData1 = sound.SoundLoadWave("Resources/botan.wav");
 
     input = new Input();
-    input->Initialize(winApp_.GetHInstance(), winApp_.GetHwnd());
+    input->Initialize(&winApp_);
     debugCamera_.Initialize(input);
 }
 
@@ -993,7 +993,7 @@ void Engine::Finalize() {
         CloseHandle(fenceEvent_);
     }
 
-    CoUninitialize();
+    winApp_.Finalize();
 }
 
 // 内部ヘルパー関数の実装

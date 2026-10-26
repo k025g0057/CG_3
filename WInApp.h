@@ -9,7 +9,7 @@ public:
     static const int32_t kClientHeight = 720;
 
     void Initialize(HINSTANCE hInstance, int nCmdShow, WNDPROC windowProc);
-    void Update();
+    bool ProcessMessage();
     void Finalize();
 
     HWND GetHwnd() const { return hwnd_; }

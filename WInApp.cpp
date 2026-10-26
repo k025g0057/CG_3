@@ -1,7 +1,10 @@
-#include "WInApp.h"
+#include "WinApp.h"
 #include <cassert>
 
-void WinApp::Initialize(HINSTANCE hInstance, int nCmdShow, int32_t clientWidth, int32_t clientHeight, WNDPROC windowProc) {
+const int32_t WinApp::kClientWidth;
+const int32_t WinApp::kClientHeight;
+
+void WinApp::Initialize(HINSTANCE hInstance, int nCmdShow, WNDPROC windowProc) {
     HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     assert(SUCCEEDED(hr));
 
@@ -11,7 +14,7 @@ void WinApp::Initialize(HINSTANCE hInstance, int nCmdShow, int32_t clientWidth, 
     wc_.hCursor = LoadCursor(nullptr, IDC_ARROW);
     RegisterClass(&wc_);
 
-    RECT wrc = { 0, 0, clientWidth, clientHeight };
+    RECT wrc = { 0, 0, kClientWidth, kClientHeight };
     AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
 
     hwnd_ = CreateWindow(

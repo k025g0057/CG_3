@@ -11,7 +11,7 @@
 #include <vector>
 #include <wrl.h>
 #include "Sound.h"
-#include "WInApp.h"
+#include "WinApp.h"
 #include "MathTypes.h"
 #include "DebugCamera.h"
 
@@ -67,7 +67,7 @@ public:
     ~Engine() = default;
 
     // エンジンの初期化
-    void Initialize(HINSTANCE hInstance, int nCmdShow, int32_t width = 1280, int32_t height = 720);
+    void Initialize(HINSTANCE hInstance, int nCmdShow);
     
     // メインループの実行
     void Run();
@@ -109,8 +109,6 @@ private:
 private:
     // ウィンドウ関連
     WinApp winApp_;
-    int32_t kClientWidth_ = 1280;
-    int32_t kClientHeight_ = 720;
 
     // ログ関連
     std::ofstream logStream_;

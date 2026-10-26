@@ -147,14 +147,11 @@ LRESULT CALLBACK Engine::WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
     return DefWindowProc(hwnd, msg, wparam, lparam);
 }
 
-void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, int32_t width, int32_t height) {
-    kClientWidth_ = width;
-    kClientHeight_ = height;
-
+void Engine::Initialize(HINSTANCE hInstance, int nCmdShow) {
     SetUnhandledExceptionFilter(ExportDump);
 
     InitializeLog();
-    winApp_.Initialize(hInstance, nCmdShow, kClientWidth_, kClientHeight_, WindowProc);
+    winApp_.Initialize(hInstance, nCmdShow, WindowProc);
     InitializeDirectX();
     InitializePipeline();
     InitializeResources();
@@ -178,7 +175,7 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, int32_t width, int32_
     soundData1 = sound.SoundLoadWave("Resources/botan.wav");
 
     input = new Input();
-    input->Initialize(hInstance, winApp_.GetHwnd());
+    input->Initialize(winApp_.GetHInstance(), winApp_.GetHwnd());
     debugCamera_.Initialize(input);
 }
 
@@ -243,8 +240,8 @@ void Engine::InitializeDirectX() {
     assert(SUCCEEDED(hr));
 
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
-    swapChainDesc.Width = kClientWidth_;
-    swapChainDesc.Height = kClientHeight_;
+    swapChainDesc.Width = WinApp::kClientWidth;
+    swapChainDesc.Height = WinApp::kClientHeight;
     swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     swapChainDesc.SampleDesc.Count = 1;
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -614,17 +611,17 @@ void Engine::InitializeResources() {
     directionalLightData_->intensity = 2.0f;
 
     // Projection
-    projectionMatrix_ = MakePerspectiveFovMatrix(0.45f, float(kClientWidth_) / float(kClientHeight_), 0.1f, 100.0f);
+    projectionMatrix_ = MakePerspectiveFovMatrix(0.45f, float(WinApp::kClientWidth) / float(WinApp::kClientHeight), 0.1f, 100.0f);
 
-    viewport_.Width = (float)kClientWidth_;
-    viewport_.Height = (float)kClientHeight_;
+    viewport_.Width = (float)WinApp::kClientWidth;
+    viewport_.Height = (float)WinApp::kClientHeight;
     viewport_.MinDepth = 0.0f;
     viewport_.MaxDepth = 1.0f;
 
     scissorRect_.left = 0;
-    scissorRect_.right = kClientWidth_;
+    scissorRect_.right = WinApp::kClientWidth;
     scissorRect_.top = 0;
-    scissorRect_.bottom = kClientHeight_;
+    scissorRect_.bottom = WinApp::kClientHeight;
 
     // 5. テクスチャ 1 転送
     DirectX::ScratchImage mipImages = LoadTexture("resources/uvChecker.png");
@@ -659,7 +656,7 @@ void Engine::InitializeResources() {
     commandList_->Reset(commandAllocator_.Get(), nullptr);
 
     // 6. DepthStencil 準備
-    depthStencilResource_ = CreateDepthStencilTextureResource(kClientWidth_, kClientHeight_);
+    depthStencilResource_ = CreateDepthStencilTextureResource(WinApp::kClientWidth, WinApp::kClientHeight);
     D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
     dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
     dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
@@ -875,7 +872,7 @@ void Engine::Update() {
 
     Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite_.scale, transformSprite_.rotate, transformSprite_.translate);
     Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
-    Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(kClientWidth_), float(kClientHeight_), 0.0f, 100.0f);
+    Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
     
     transformationMatrixDataSprite_->wvp = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectionMatrixSprite));
     transformationMatrixDataSprite_->World = worldMatrixSprite;

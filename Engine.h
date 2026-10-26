@@ -31,6 +31,11 @@ struct TransformationMatrix {
     Matrix4x4 World;
 };
 
+struct Particle {
+    Transform transform;
+    Vector3 velocity;
+};
+
 struct VertexData {
     Vector4 position;
     Vector2 texcoord;
@@ -169,6 +174,7 @@ private:
     TransformationMatrix* instancingData_ = nullptr;
 
     static constexpr uint32_t kNumInstance = 10;
+    Particle particles[kNumInstance]{};
 
     ComPtr<ID3D12Resource> transformationMatrixResourceSprite_;
     TransformationMatrix* transformationMatrixDataSprite_ = nullptr;
@@ -200,6 +206,7 @@ private:
     Matrix4x4 projectionMatrix_{};
 
     bool drawSphere_ = false;
+    bool updateParticles_ = false;
     bool useMonsterBall_ = true;
 
     Sound sound;

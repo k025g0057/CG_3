@@ -4,7 +4,6 @@
 
 #include "Engine.h"
 #include "Input.h"
-
 #include <cassert>
 #include <chrono>
 #include <dbghelp.h>
@@ -159,6 +158,19 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, int32_t width, int32_
     InitializeDirectX();
     InitializePipeline();
     InitializeResources();
+
+    // ParticleのTransformと速度を初期化する
+    for (uint32_t index = 0; index < kNumInstance; ++index) {
+        particles[index].transform.scale = { 1.0f, 1.0f, 1.0f };
+        particles[index].transform.rotate = { 0.0f, 0.0f, 0.0f };
+        particles[index].transform.translate = {
+            index * 0.15f,
+            index * -0.1f,
+            index * 0.5f
+        };
+        particles[index].velocity = { 0.0f, 1.0f, 0.0f };
+    }
+
     InitializeImGui();
 
     // サウンドの初期化と読み込み
@@ -762,18 +774,13 @@ void Engine::Run() {
 }
 
 void Engine::Update() {
-
-    Transform transforms[kNumInstance];
-
-    for (uint32_t index = 0; index < kNumInstance; ++index) {
-        transforms[index].scale = { 1.0f, 1.0f, 1.0f };
-        transforms[index].rotate = { 0.0f, 0.0f, 0.0f };
-        // 画像のように奥（Z方向）および右上・左下にずらして配置
-        transforms[index].translate = {
-            index * 0.15f,
-            index * -0.1f,
-            index * 0.5f
-        };
+    const float kDeltaTime = 1.0f / 60.0f;
+    if (updateParticles_) {
+        for (uint32_t index = 0; index < kNumInstance; ++index) {
+            particles[index].transform.translate.x += particles[index].velocity.x * kDeltaTime;
+            particles[index].transform.translate.y += particles[index].velocity.y * kDeltaTime;
+            particles[index].transform.translate.z += particles[index].velocity.z * kDeltaTime;
+        }
     }
 
     input->Update();
@@ -791,6 +798,7 @@ void Engine::Update() {
     ImGui::Begin("Settings");
 
     ImGui::Checkbox("Draw Sphere", &drawSphere_);
+    ImGui::Checkbox("Update", &updateParticles_);
    
 
     ImGui::ColorEdit4("color", &materialData_->color.x, ImGuiColorEditFlags_Uint8);
@@ -850,9 +858,9 @@ void Engine::Update() {
 
     for (uint32_t index = 0; index < kNumInstance; ++index) {
         Matrix4x4 worldMatrix = MakeAffineMatrix(
-            transforms[index].scale,
-            transforms[index].rotate,
-            transforms[index].translate
+            particles[index].transform.scale,
+            particles[index].transform.rotate,
+            particles[index].transform.translate
         );
 
         Matrix4x4 worldViewProjectionMatrix =

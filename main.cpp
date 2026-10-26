@@ -1,5 +1,5 @@
 #include "Engine.h"
-#include "WInApp.h"
+#include "WinApp.h"
 
 // Windowsアプリのエントリーポイント
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int nCmdShow) {
@@ -10,7 +10,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In
     Engine engine;
 
     // 初期化 (ウィンドウ作成・DirectX12初期化・リソース作成等)
-    engine.Initialize(hInstance, nCmdShow, 1280, 720);
+    engine.Initialize(hInstance, nCmdShow);
 
     // メインループの実行
     engine.Run();

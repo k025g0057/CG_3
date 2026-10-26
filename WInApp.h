@@ -5,10 +5,14 @@
 
 class WinApp {
 public:
-    void Initialize(HINSTANCE hInstance, int nCmdShow, int32_t clientWidth, int32_t clientHeight, WNDPROC windowProc);
+    static const int32_t kClientWidth = 1280;
+    static const int32_t kClientHeight = 720;
+
+    void Initialize(HINSTANCE hInstance, int nCmdShow, WNDPROC windowProc);
     void Update();
 
     HWND GetHwnd() const { return hwnd_; }
+    HINSTANCE GetHInstance() const { return wc_.hInstance; }
 
 private:
     HWND hwnd_ = nullptr;

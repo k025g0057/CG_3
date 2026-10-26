@@ -757,16 +757,13 @@ void Engine::InitializeImGui() {
 }
 
 void Engine::Run() {
-    MSG msg{};
-    while (msg.message != WM_QUIT) {
-        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+    while (true) {
+        if (winApp_.ProcessMessage()) {
+            break;
         }
-        else {
-            Update();
-            Draw();
-        }
+
+        Update();
+        Draw();
     }
 }
 

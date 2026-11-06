@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <chrono>
 #include <Windows.h>
 #include <cstddef>
 #include <cstdint>
@@ -64,6 +65,8 @@ private:
     void InitializeViewport();
     void InitializeScissorRect();
     void InitializeDXC();
+    void InitializeFixFPS();
+    void UpdateFixFPS();
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(
         D3D12_DESCRIPTOR_HEAP_TYPE heapType,
         UINT numDescriptors,
@@ -81,6 +84,7 @@ private:
 
     WinApp* winApp_ = nullptr;
     std::ofstream* logStream_ = nullptr;
+    std::chrono::steady_clock::time_point reference_{};
     Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory_;
     Microsoft::WRL::ComPtr<IDXGIAdapter4> useAdapter_;
     Microsoft::WRL::ComPtr<ID3D12Device> device_;

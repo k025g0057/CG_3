@@ -243,6 +243,65 @@ void DirectXManager::InitializeImGui() {
 #endif
 }
 
+void DirectXManager::PreDraw() {
+    const UINT backBufferIndex = swapChain_->GetCurrentBackBufferIndex();
+
+    D3D12_RESOURCE_BARRIER barrier{};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    barrier.Transition.pResource = swapChainResources_[backBufferIndex].Get();
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    commandList_->ResourceBarrier(1, &barrier);
+
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHandles_[backBufferIndex];
+    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptorHeap_->GetCPUDescriptorHandleForHeapStart();
+    commandList_->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle);
+
+    const float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
+    commandList_->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+    commandList_->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+    ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap_.Get() };
+    commandList_->SetDescriptorHeaps(1, descriptorHeaps);
+    commandList_->RSSetViewports(1, &viewport_);
+    commandList_->RSSetScissorRects(1, &scissorRect_);
+}
+
+void DirectXManager::PostDraw() {
+    const UINT backBufferIndex = swapChain_->GetCurrentBackBufferIndex();
+
+    D3D12_RESOURCE_BARRIER barrier{};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    barrier.Transition.pResource = swapChainResources_[backBufferIndex].Get();
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+    commandList_->ResourceBarrier(1, &barrier);
+
+    HRESULT hr = commandList_->Close();
+    assert(SUCCEEDED(hr));
+
+    ID3D12CommandList* commandLists[] = { commandList_.Get() };
+    commandQueue_->ExecuteCommandLists(1, commandLists);
+    swapChain_->Present(1, 0);
+
+    ++fenceValue_;
+    hr = commandQueue_->Signal(fence_.Get(), fenceValue_);
+    assert(SUCCEEDED(hr));
+
+    if (fence_->GetCompletedValue() < fenceValue_) {
+        hr = fence_->SetEventOnCompletion(fenceValue_, fenceEvent_);
+        assert(SUCCEEDED(hr));
+        WaitForSingleObject(fenceEvent_, INFINITE);
+    }
+
+    hr = commandAllocator_->Reset();
+    assert(SUCCEEDED(hr));
+    hr = commandList_->Reset(commandAllocator_.Get(), nullptr);
+    assert(SUCCEEDED(hr));
+}
+
 void DirectXManager::Finalize() {
 #ifdef USE_IMGUI
     ImGui_ImplDX12_Shutdown();

@@ -702,28 +702,7 @@ void Engine::Update() {
 }
 
 void Engine::Draw() {
-    UINT backBufferIndex = directXManager_->GetSwapChain()->GetCurrentBackBufferIndex();
-
-    D3D12_RESOURCE_BARRIER barrier{};
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource = directXManager_->GetSwapChainResource(backBufferIndex).Get();
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    directXManager_->GetCommandList()->ResourceBarrier(1, &barrier);
-
-    float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
-    directXManager_->GetCommandList()->ClearRenderTargetView(directXManager_->GetRtvHandles()[backBufferIndex], clearColor, 0, nullptr);
-
-    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = directXManager_->GetDsvDescriptorHeap()->GetCPUDescriptorHandleForHeapStart();
-    directXManager_->GetCommandList()->OMSetRenderTargets(1, &directXManager_->GetRtvHandles()[backBufferIndex], false, &dsvHandle);
-    directXManager_->GetCommandList()->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-    ID3D12DescriptorHeap* descriptorHeaps[] = { directXManager_->GetSrvDescriptorHeap().Get() };
-    directXManager_->GetCommandList()->SetDescriptorHeaps(1, descriptorHeaps);
-
-    directXManager_->GetCommandList()->RSSetViewports(1, &directXManager_->GetViewport());
-    directXManager_->GetCommandList()->RSSetScissorRects(1, &directXManager_->GetScissorRect());
+    directXManager_->PreDraw();
 
     directXManager_->GetCommandList()->SetGraphicsRootSignature(rootSignature_.Get());
     directXManager_->GetCommandList()->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
@@ -770,30 +749,7 @@ void Engine::Draw() {
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), directXManager_->GetCommandList().Get());
 #endif
 
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-    directXManager_->GetCommandList()->ResourceBarrier(1, &barrier);
-
-    HRESULT hr = directXManager_->GetCommandList()->Close();
-    assert(SUCCEEDED(hr));
-
-    ID3D12CommandList* commandLists[] = { directXManager_->GetCommandList().Get() };
-    directXManager_->GetCommandQueue()->ExecuteCommandLists(1, commandLists);
-
-    directXManager_->GetSwapChain()->Present(1, 0);
-
-    directXManager_->GetFenceValue()++;
-    directXManager_->GetCommandQueue()->Signal(directXManager_->GetFence().Get(), directXManager_->GetFenceValue());
-
-    if (directXManager_->GetFence()->GetCompletedValue() < directXManager_->GetFenceValue()) {
-        directXManager_->GetFence()->SetEventOnCompletion(directXManager_->GetFenceValue(), directXManager_->GetFenceEvent());
-        WaitForSingleObject(directXManager_->GetFenceEvent(), INFINITE);
-    }
-
-    hr = directXManager_->GetCommandAllocator()->Reset();
-    assert(SUCCEEDED(hr));
-    hr = directXManager_->GetCommandList()->Reset(directXManager_->GetCommandAllocator().Get(), nullptr);
-    assert(SUCCEEDED(hr));
+    directXManager_->PostDraw();
 }
 
 void Engine::Finalize() {

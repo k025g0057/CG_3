@@ -58,10 +58,6 @@ struct ModelData {
     MaterialData material;
 };
 
-struct D3DResourceLeakChecker {
-    ~D3DResourceLeakChecker();
-};
-
 class Engine {
 public:
     Engine() = default;
@@ -92,11 +88,7 @@ private:
     void Draw();
 
     // ヘルパー関数
-    ComPtr<ID3D12Resource> CreateBufferResource(size_t sizeInBytes);
-    ComPtr<ID3D12Resource> CreateTextureResource(const DirectX::TexMetadata& metadata);
     
-    ComPtr<IDxcBlob> CompileShader(const std::wstring& filePath, const wchar_t* profile);
-    DirectX::ScratchImage LoadTexture(const std::string& filePath);
     ModelData LoadObjFile(const std::string& directoryPath, const std::string& filename);
     MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
 

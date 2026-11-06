@@ -14,7 +14,6 @@
 #include <numbers>
 #include <sstream>
 #include <strsafe.h>
-#include <dxgidebug.h>
 #include "externals/DirectXTex/d3dx12.h"
 
 #ifdef USE_IMGUI
@@ -91,15 +90,6 @@ static LONG WINAPI ExportDump(EXCEPTION_POINTERS* exception) {
 
     MiniDumpWriteDump(GetCurrentProcess(), processId, dumpFileHandle, MiniDumpNormal, &minidumpInformation, nullptr, nullptr);
     return EXCEPTION_EXECUTE_HANDLER;
-}
-
-D3DResourceLeakChecker::~D3DResourceLeakChecker() {
-    ComPtr<IDXGIDebug1> debug;
-    if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
-        debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-        debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
-        debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
-    }
 }
 
 // --- Engine クラスの実装 ---
@@ -304,8 +294,8 @@ void Engine::InitializePipeline() {
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
-    ComPtr<IDxcBlob> vertexShaderBlob = CompileShader(L"Object3D.VS.hlsl", L"vs_6_0");
-    ComPtr<IDxcBlob> pixelShaderBlob = CompileShader(L"Object3D.PS.hlsl", L"ps_6_0");
+    ComPtr<IDxcBlob> vertexShaderBlob = directXManager_->CompileShader(L"Object3D.VS.hlsl", L"vs_6_0");
+    ComPtr<IDxcBlob> pixelShaderBlob = directXManager_->CompileShader(L"Object3D.PS.hlsl", L"ps_6_0");
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
     graphicsPipelineStateDesc.pRootSignature = rootSignature_.Get();
@@ -335,8 +325,8 @@ void Engine::InitializePipeline() {
     // -------------------------------------------------------------------
     // ★ 追加：Particle (インスタンシング) 用 PSO の作成
     // -------------------------------------------------------------------
-    ComPtr<IDxcBlob> particleVSBlob = CompileShader(L"Particle.VS.hlsl", L"vs_6_0");
-    ComPtr<IDxcBlob> particlePSBlob = CompileShader(L"Particle.PS.hlsl", L"ps_6_0");
+    ComPtr<IDxcBlob> particleVSBlob = directXManager_->CompileShader(L"Particle.VS.hlsl", L"vs_6_0");
+    ComPtr<IDxcBlob> particlePSBlob = directXManager_->CompileShader(L"Particle.PS.hlsl", L"ps_6_0");
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC particlePsoDesc = graphicsPipelineStateDesc;
     particlePsoDesc.pRootSignature = particleRootSignature_.Get(); // インスタンシング用のルートシグネチャをセット
@@ -350,7 +340,7 @@ void Engine::InitializePipeline() {
 void Engine::InitializeResources() {
     // 1. Plane モデル読み込み
     modelData_ = LoadObjFile("resources", "plane.obj"); //modelData_ = LoadObjFile("resources/fence", "fence.obj");フェンスだったらこっちに変える
-    vertexResourcePlane_ = CreateBufferResource(sizeof(VertexData) * modelData_.vertices.size());
+    vertexResourcePlane_ = directXManager_->CreateBufferResource(sizeof(VertexData) * modelData_.vertices.size());
     vertexBufferViewPlane_.BufferLocation = vertexResourcePlane_->GetGPUVirtualAddress();
     vertexBufferViewPlane_.SizeInBytes = UINT(sizeof(VertexData) * modelData_.vertices.size());
     vertexBufferViewPlane_.StrideInBytes = sizeof(VertexData);
@@ -369,7 +359,7 @@ void Engine::InitializeResources() {
     // 2. Sphere 頂点生成
     const uint32_t kSubdivision = 64;
     kNumSphereVertices_ = kSubdivision * kSubdivision * 6;
-    vertexResourceSphere_ = CreateBufferResource(sizeof(VertexData) * kNumSphereVertices_);
+    vertexResourceSphere_ = directXManager_->CreateBufferResource(sizeof(VertexData) * kNumSphereVertices_);
     vertexBufferViewSphere_.BufferLocation = vertexResourceSphere_->GetGPUVirtualAddress();
     vertexBufferViewSphere_.SizeInBytes = sizeof(VertexData) * kNumSphereVertices_;
     vertexBufferViewSphere_.StrideInBytes = sizeof(VertexData);
@@ -407,12 +397,12 @@ void Engine::InitializeResources() {
     }
 
     // 3. Sprite 頂点・インデックスリソース
-    vertexResourceSprite_ = CreateBufferResource(sizeof(VertexData) * 6);
+    vertexResourceSprite_ = directXManager_->CreateBufferResource(sizeof(VertexData) * 6);
     vertexBufferViewSprite_.BufferLocation = vertexResourceSprite_->GetGPUVirtualAddress();
     vertexBufferViewSprite_.SizeInBytes = sizeof(VertexData) * 6;
     vertexBufferViewSprite_.StrideInBytes = sizeof(VertexData);
 
-    indexResourceSprite_ = CreateBufferResource(sizeof(uint32_t) * 6);
+    indexResourceSprite_ = directXManager_->CreateBufferResource(sizeof(uint32_t) * 6);
     indexBufferViewSprite_.BufferLocation = indexResourceSprite_->GetGPUVirtualAddress();
     indexBufferViewSprite_.SizeInBytes = sizeof(uint32_t) * 6;
     indexBufferViewSprite_.Format = DXGI_FORMAT_R32_UINT;
@@ -430,25 +420,25 @@ void Engine::InitializeResources() {
     indexDataSprite[3] = 1; indexDataSprite[4] = 3; indexDataSprite[5] = 2;
 
     // 4. 定数バッファ
-    materialResource_ = CreateBufferResource(sizeof(Material));
+    materialResource_ = directXManager_->CreateBufferResource(sizeof(Material));
     materialResource_->Map(0, nullptr, reinterpret_cast<void**>(&materialData_));
     materialData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
     materialData_->enableLighting = true;
     materialData_->uvTransform = MakeIdentity4x4();
 
-    materialResourceSprite_ = CreateBufferResource(sizeof(Material));
+    materialResourceSprite_ = directXManager_->CreateBufferResource(sizeof(Material));
     materialResourceSprite_->Map(0, nullptr, reinterpret_cast<void**>(&materialDataSprite_));
     materialDataSprite_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
     materialDataSprite_->enableLighting = false;
     materialDataSprite_->uvTransform = MakeIdentity4x4();
 
-    wvpResource_ = CreateBufferResource(sizeof(TransformationMatrix));
+    wvpResource_ = directXManager_->CreateBufferResource(sizeof(TransformationMatrix));
     wvpResource_->Map(0, nullptr, reinterpret_cast<void**>(&wvpData_));
     wvpData_->wvp = MakeIdentity4x4();
     wvpData_->World = MakeIdentity4x4();
 
     instancingResource_ =
-        CreateBufferResource(sizeof(TransformationMatrix) * kNumInstance);
+        directXManager_->CreateBufferResource(sizeof(TransformationMatrix) * kNumInstance);
 
     instancingResource_->Map(
         0, nullptr, reinterpret_cast<void**>(&instancingData_));
@@ -458,12 +448,12 @@ void Engine::InitializeResources() {
         instancingData_[index].World = MakeIdentity4x4();
     }
 
-    transformationMatrixResourceSprite_ = CreateBufferResource(sizeof(TransformationMatrix));
+    transformationMatrixResourceSprite_ = directXManager_->CreateBufferResource(sizeof(TransformationMatrix));
     transformationMatrixResourceSprite_->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixDataSprite_));
     transformationMatrixDataSprite_->wvp = MakeIdentity4x4();
     transformationMatrixDataSprite_->World = MakeIdentity4x4();
 
-    directionalLightResource_ = CreateBufferResource(sizeof(DirectionalLight));
+    directionalLightResource_ = directXManager_->CreateBufferResource(sizeof(DirectionalLight));
     directionalLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&directionalLightData_));
     directionalLightData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
     directionalLightData_->direction = { 0.0f, -1.0f, 0.0f };
@@ -474,16 +464,16 @@ void Engine::InitializeResources() {
 
 
     // 5. テクスチャ 1 転送
-    DirectX::ScratchImage mipImages = LoadTexture("resources/uvChecker.png");
+    DirectX::ScratchImage mipImages = DirectXManager::LoadTexture("resources/uvChecker.png");
     const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
-    textureResource_ = CreateTextureResource(metadata);
+    textureResource_ = directXManager_->CreateTextureResource(metadata);
 
     std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-    DirectX::PrepareUpload(directXManager_->GetDevice().Get(), mipImages.GetImages(), mipImages.GetImageCount(), mipImages.GetMetadata(), subresources);
+    DirectX::PrepareUpload(directXManager_->GetDevice(), mipImages.GetImages(), mipImages.GetImageCount(), mipImages.GetMetadata(), subresources);
     uint64_t intermediateSize = GetRequiredIntermediateSize(textureResource_.Get(), 0, UINT(subresources.size()));
-    ComPtr<ID3D12Resource> intermediateResource = CreateBufferResource(intermediateSize);
+    ComPtr<ID3D12Resource> intermediateResource = directXManager_->CreateBufferResource(intermediateSize);
 
-    UpdateSubresources(directXManager_->GetCommandList().Get(), textureResource_.Get(), intermediateResource.Get(), 0, 0, UINT(subresources.size()), subresources.data());
+    UpdateSubresources(directXManager_->GetCommandList(), textureResource_.Get(), intermediateResource.Get(), 0, 0, UINT(subresources.size()), subresources.data());
 
     D3D12_RESOURCE_BARRIER barrier{};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -494,7 +484,7 @@ void Engine::InitializeResources() {
     directXManager_->GetCommandList()->ResourceBarrier(1, &barrier);
 
     directXManager_->GetCommandList()->Close();
-    ID3D12CommandList* commandLists[] = { directXManager_->GetCommandList().Get() };
+    ID3D12CommandList* commandLists[] = { directXManager_->GetCommandList() };
     directXManager_->GetCommandQueue()->ExecuteCommandLists(1, commandLists);
     directXManager_->GetFenceValue()++;
     directXManager_->GetCommandQueue()->Signal(directXManager_->GetFence().Get(), directXManager_->GetFenceValue());
@@ -517,16 +507,16 @@ void Engine::InitializeResources() {
     directXManager_->GetDevice()->CreateShaderResourceView(textureResource_.Get(), &srvDesc, textureSrvHandleCPU);
 
     // 7. テクスチャ 2 転送
-    DirectX::ScratchImage mipImages2 = LoadTexture(modelData_.material.textureFilePath);
+    DirectX::ScratchImage mipImages2 = DirectXManager::LoadTexture(modelData_.material.textureFilePath);
     const DirectX::TexMetadata& metadata2 = mipImages2.GetMetadata();
-    textureResource2_ = CreateTextureResource(metadata2);
+    textureResource2_ = directXManager_->CreateTextureResource(metadata2);
 
     std::vector<D3D12_SUBRESOURCE_DATA> subresources2;
-    DirectX::PrepareUpload(directXManager_->GetDevice().Get(), mipImages2.GetImages(), mipImages2.GetImageCount(), mipImages2.GetMetadata(), subresources2);
+    DirectX::PrepareUpload(directXManager_->GetDevice(), mipImages2.GetImages(), mipImages2.GetImageCount(), mipImages2.GetMetadata(), subresources2);
     uint64_t intermediateSize2 = GetRequiredIntermediateSize(textureResource2_.Get(), 0, UINT(subresources2.size()));
-    ComPtr<ID3D12Resource> intermediateResource2 = CreateBufferResource(intermediateSize2);
+    ComPtr<ID3D12Resource> intermediateResource2 = directXManager_->CreateBufferResource(intermediateSize2);
 
-    UpdateSubresources(directXManager_->GetCommandList().Get(), textureResource2_.Get(), intermediateResource2.Get(), 0, 0, UINT(subresources2.size()), subresources2.data());
+    UpdateSubresources(directXManager_->GetCommandList(), textureResource2_.Get(), intermediateResource2.Get(), 0, 0, UINT(subresources2.size()), subresources2.data());
 
     D3D12_RESOURCE_BARRIER barrier2{};
     barrier2.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -537,7 +527,7 @@ void Engine::InitializeResources() {
     directXManager_->GetCommandList()->ResourceBarrier(1, &barrier2);
 
     directXManager_->GetCommandList()->Close();
-    ID3D12CommandList* commandLists2[] = { directXManager_->GetCommandList().Get() };
+    ID3D12CommandList* commandLists2[] = { directXManager_->GetCommandList() };
     directXManager_->GetCommandQueue()->ExecuteCommandLists(1, commandLists2);
     directXManager_->GetFenceValue()++;
     directXManager_->GetCommandQueue()->Signal(directXManager_->GetFence().Get(), directXManager_->GetFenceValue());
@@ -746,7 +736,7 @@ void Engine::Draw() {
 
 #ifdef USE_IMGUI
     ImGui::Render();
-    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), directXManager_->GetCommandList().Get());
+    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), directXManager_->GetCommandList());
 #endif
 
     directXManager_->PostDraw();
@@ -767,103 +757,6 @@ void Engine::Finalize() {
 }
 
 // 内部ヘルパー関数の実装
-ComPtr<ID3D12Resource> Engine::CreateBufferResource(size_t sizeInBytes) {
-    D3D12_HEAP_PROPERTIES uploadHeapProperties{};
-    uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-    D3D12_RESOURCE_DESC resourceDesc{};
-    resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    resourceDesc.Width = sizeInBytes;
-    resourceDesc.Height = 1;
-    resourceDesc.DepthOrArraySize = 1;
-    resourceDesc.MipLevels = 1;
-    resourceDesc.SampleDesc.Count = 1;
-    resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-    ComPtr<ID3D12Resource> resource;
-    HRESULT hr = directXManager_->GetDevice()->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE,
-        &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&resource));
-    assert(SUCCEEDED(hr));
-    return resource;
-}
-
-ComPtr<ID3D12Resource> Engine::CreateTextureResource(const DirectX::TexMetadata& metadata) {
-    D3D12_RESOURCE_DESC resourceDesc{};
-    resourceDesc.Width = UINT(metadata.width);
-    resourceDesc.Height = UINT(metadata.height);
-    resourceDesc.MipLevels = UINT16(metadata.mipLevels);
-    resourceDesc.DepthOrArraySize = UINT16(metadata.arraySize);
-    resourceDesc.Format = metadata.format;
-    resourceDesc.SampleDesc.Count = 1;
-    resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION(metadata.dimension);
-
-    D3D12_HEAP_PROPERTIES heapProperties{};
-    heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-
-    ComPtr<ID3D12Resource> resource = nullptr;
-    HRESULT hr = directXManager_->GetDevice()->CreateCommittedResource(
-        &heapProperties, D3D12_HEAP_FLAG_NONE,
-        &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
-        nullptr, IID_PPV_ARGS(&resource));
-    assert(SUCCEEDED(hr));
-    return resource;
-}
-
-ComPtr<IDxcBlob> Engine::CompileShader(const std::wstring& filePath, const wchar_t* profile) {
-    Logger::Log(logStream_, StringUtility::ConvertString(std::format(L"Begin CompileShader, path:{}, profile:{}\n", filePath, profile)));
-
-    ComPtr<IDxcBlobEncoding> shaderSource;
-    HRESULT hr = directXManager_->GetDxcUtils()->LoadFile(filePath.c_str(), nullptr, &shaderSource);
-    assert(SUCCEEDED(hr));
-
-    DxcBuffer shaderSourceBuffer;
-    shaderSourceBuffer.Ptr = shaderSource->GetBufferPointer();
-    shaderSourceBuffer.Size = shaderSource->GetBufferSize();
-    shaderSourceBuffer.Encoding = DXC_CP_UTF8;
-
-    LPCWSTR arguments[] = {
-        filePath.c_str(),
-        L"-E", L"main",
-        L"-T", profile,
-        L"-Zi", L"-Qembed_debug",
-        L"-Od",
-        L"-Zpr",
-    };
-
-    ComPtr<IDxcResult> shaderResult;
-    hr = directXManager_->GetDxcCompiler()->Compile(&shaderSourceBuffer, arguments, _countof(arguments), directXManager_->GetIncludeHandler().Get(), IID_PPV_ARGS(&shaderResult));
-    assert(SUCCEEDED(hr));
-
-    ComPtr<IDxcBlobUtf8> shaderError;
-    shaderResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&shaderError), nullptr);
-    if (shaderError != nullptr && shaderError->GetStringLength() != 0) {
-        Logger::Log(logStream_, shaderError->GetStringPointer());
-        assert(false);
-    }
-
-    ComPtr<IDxcBlob> shaderBlob;
-    hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);
-    assert(SUCCEEDED(hr));
-
-    Logger::Log(logStream_, StringUtility::ConvertString(std::format(L"Compile Succeeded, path:{}, profile:{}\n", filePath, profile)));
-    return shaderBlob;
-}
-
-DirectX::ScratchImage Engine::LoadTexture(const std::string& filePath) {
-    std::wstring filePathW = StringUtility::ConvertString(filePath);
-    DirectX::ScratchImage image;
-    HRESULT hr = DirectX::LoadFromWICFile(filePathW.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, image);
-    assert(SUCCEEDED(hr));
-
-    DirectX::ScratchImage mipImages;
-    hr = DirectX::GenerateMipMaps(
-        image.GetImages(), image.GetImageCount(), image.GetMetadata(),
-        DirectX::TEX_FILTER_DEFAULT, 4, mipImages);
-    assert(SUCCEEDED(hr));
-
-    return mipImages;
-}
-
 MaterialData Engine::LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename) {
     MaterialData materialData;
     std::string line;

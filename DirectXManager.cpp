@@ -163,6 +163,7 @@ void DirectXManager::InitializeRenderTargetView() {
 void DirectXManager::Initialize(WinApp* winApp, std::ofstream& logStream) {
     assert(winApp != nullptr);
     this->winApp_ = winApp;
+    logStream_ = &logStream;
     InitializeDevice(logStream);
     InitializeCommand();
     InitializeSwapChain();
@@ -300,6 +301,120 @@ void DirectXManager::PostDraw() {
     assert(SUCCEEDED(hr));
     hr = commandList_->Reset(commandAllocator_.Get(), nullptr);
     assert(SUCCEEDED(hr));
+}
+
+ComPtr<IDxcBlob> DirectXManager::CompileShader(const std::wstring& filePath, const wchar_t* profile) {
+    assert(logStream_ != nullptr);
+    Logger::Log(*logStream_, StringUtility::ConvertString(std::format(L"Begin CompileShader, path:{}, profile:{}\n", filePath, profile)));
+
+    ComPtr<IDxcBlobEncoding> shaderSource;
+    HRESULT hr = dxcUtils_->LoadFile(filePath.c_str(), nullptr, &shaderSource);
+    assert(SUCCEEDED(hr));
+
+    DxcBuffer shaderSourceBuffer{};
+    shaderSourceBuffer.Ptr = shaderSource->GetBufferPointer();
+    shaderSourceBuffer.Size = shaderSource->GetBufferSize();
+    shaderSourceBuffer.Encoding = DXC_CP_UTF8;
+
+    LPCWSTR arguments[] = {
+        filePath.c_str(),
+        L"-E", L"main",
+        L"-T", profile,
+        L"-Zi", L"-Qembed_debug",
+        L"-Od",
+        L"-Zpr",
+    };
+
+    ComPtr<IDxcResult> shaderResult;
+    hr = dxcCompiler_->Compile(
+        &shaderSourceBuffer,
+        arguments,
+        _countof(arguments),
+        includeHandler_.Get(),
+        IID_PPV_ARGS(&shaderResult));
+    assert(SUCCEEDED(hr));
+
+    ComPtr<IDxcBlobUtf8> shaderError;
+    shaderResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&shaderError), nullptr);
+    if (shaderError != nullptr && shaderError->GetStringLength() != 0) {
+        Logger::Log(*logStream_, shaderError->GetStringPointer());
+        assert(false);
+    }
+
+    ComPtr<IDxcBlob> shaderBlob;
+    hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);
+    assert(SUCCEEDED(hr));
+
+    Logger::Log(*logStream_, StringUtility::ConvertString(std::format(L"Compile Succeeded, path:{}, profile:{}\n", filePath, profile)));
+    return shaderBlob;
+}
+
+ComPtr<ID3D12Resource> DirectXManager::CreateBufferResource(size_t sizeInBytes) {
+    D3D12_HEAP_PROPERTIES uploadHeapProperties{};
+    uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+    D3D12_RESOURCE_DESC resourceDesc{};
+    resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resourceDesc.Width = sizeInBytes;
+    resourceDesc.Height = 1;
+    resourceDesc.DepthOrArraySize = 1;
+    resourceDesc.MipLevels = 1;
+    resourceDesc.SampleDesc.Count = 1;
+    resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+    ComPtr<ID3D12Resource> resource;
+    HRESULT hr = device_->CreateCommittedResource(
+        &uploadHeapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &resourceDesc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&resource));
+    assert(SUCCEEDED(hr));
+    return resource;
+}
+
+ComPtr<ID3D12Resource> DirectXManager::CreateTextureResource(const DirectX::TexMetadata& metadata) {
+    D3D12_RESOURCE_DESC resourceDesc{};
+    resourceDesc.Width = UINT(metadata.width);
+    resourceDesc.Height = UINT(metadata.height);
+    resourceDesc.MipLevels = UINT16(metadata.mipLevels);
+    resourceDesc.DepthOrArraySize = UINT16(metadata.arraySize);
+    resourceDesc.Format = metadata.format;
+    resourceDesc.SampleDesc.Count = 1;
+    resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION(metadata.dimension);
+
+    D3D12_HEAP_PROPERTIES heapProperties{};
+    heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+    ComPtr<ID3D12Resource> resource;
+    HRESULT hr = device_->CreateCommittedResource(
+        &heapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &resourceDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&resource));
+    assert(SUCCEEDED(hr));
+    return resource;
+}
+
+DirectX::ScratchImage DirectXManager::LoadTexture(const std::string& filePath) {
+    std::wstring filePathW = StringUtility::ConvertString(filePath);
+    DirectX::ScratchImage image;
+    HRESULT hr = DirectX::LoadFromWICFile(filePathW.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, image);
+    assert(SUCCEEDED(hr));
+
+    DirectX::ScratchImage mipImages;
+    hr = DirectX::GenerateMipMaps(
+        image.GetImages(),
+        image.GetImageCount(),
+        image.GetMetadata(),
+        DirectX::TEX_FILTER_DEFAULT,
+        4,
+        mipImages);
+    assert(SUCCEEDED(hr));
+    return mipImages;
 }
 
 void DirectXManager::Finalize() {

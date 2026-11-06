@@ -1,22 +1,21 @@
 #include "Engine.h"
-#include "WinApp.h"
+#include "DirectXManager.h"
 
 // Windowsアプリのエントリーポイント
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int nCmdShow) {
     // リークチェック構造体
     D3DResourceLeakChecker leakCheck;
 
-    // エンジンのインスタンス作成
-    Engine engine;
+    // DirectX基盤クラスを生成し、Engineへ渡す。
+    DirectXManager* dxManager = new DirectXManager();
+    {
+        Engine engine;
+        engine.Initialize(hInstance, nCmdShow, dxManager);
+        engine.Run();
+        engine.Finalize();
+    }
 
-    // 初期化 (ウィンドウ作成・DirectX12初期化・リソース作成等)
-    engine.Initialize(hInstance, nCmdShow);
-
-    // メインループの実行
-    engine.Run();
-
-    // 終了処理
-    engine.Finalize();
-
+    // Engineの所有物を解放してからDirectX基盤クラスを解放する。
+    delete dxManager;
     return 0;
 }

@@ -185,6 +185,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
     <ClCompile Include="WinApp.cpp" />
+    <ClCompile Include="DirectXManager.cpp" />
+    <ClCompile Include="Logger.cpp" />
+    <ClCompile Include="StringUtility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Object3d.PS.hlsl">
@@ -235,6 +238,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="MathTypes.h" />
     <ClInclude Include="Sound.h" />
     <ClInclude Include="WinApp.h" />
+    <ClInclude Include="DirectXManager.h" />
+    <ClInclude Include="Logger.h" />
+    <ClInclude Include="StringUtility.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />

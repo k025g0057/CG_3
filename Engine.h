@@ -12,6 +12,7 @@
 #include <wrl.h>
 #include "Sound.h"
 #include "WinApp.h"
+#include "DirectXManager.h"
 #include "MathTypes.h"
 #include "DebugCamera.h"
 
@@ -67,7 +68,7 @@ public:
     ~Engine() = default;
 
     // エンジンの初期化
-    void Initialize(HINSTANCE hInstance, int nCmdShow);
+    void Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* directXManager);
     
     // メインループの実行
     void Run();
@@ -83,23 +84,16 @@ public:
 private:
     // 内部初期化ステップ
     void InitializeLog();
-    void InitializeDirectX();
     void InitializePipeline();
     void InitializeResources();
-    void InitializeImGui();
 
     // ループ処理内部
     void Update();
     void Draw();
 
     // ヘルパー関数
-    ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible);
     ComPtr<ID3D12Resource> CreateBufferResource(size_t sizeInBytes);
     ComPtr<ID3D12Resource> CreateTextureResource(const DirectX::TexMetadata& metadata);
-    ComPtr<ID3D12Resource> CreateDepthStencilTextureResource(int32_t width, int32_t height);
-    
-    D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(const ComPtr<ID3D12DescriptorHeap>& descriptorHeap, uint32_t descriptorSize, uint32_t index);
-    D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(const ComPtr<ID3D12DescriptorHeap>& descriptorHeap, uint32_t descriptorSize, uint32_t index);
     
     ComPtr<IDxcBlob> CompileShader(const std::wstring& filePath, const wchar_t* profile);
     DirectX::ScratchImage LoadTexture(const std::string& filePath);
@@ -109,38 +103,12 @@ private:
 private:
     // ウィンドウ関連
     WinApp winApp_;
+    DirectXManager* directXManager_ = nullptr;
 
     // ログ関連
     std::ofstream logStream_;
 
-    // DirectX12 関連オブジェクト
-    ComPtr<IDXGIFactory7> dxgiFactory_;
-    ComPtr<IDXGIAdapter4> useAdapter_;
-    ComPtr<ID3D12Device> device_;
-    ComPtr<ID3D12CommandQueue> commandQueue_;
-    ComPtr<ID3D12CommandAllocator> commandAllocator_;
-    ComPtr<ID3D12GraphicsCommandList> commandList_;
-    ComPtr<IDXGISwapChain4> swapChain_;
-    
-    ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap_;
-    ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap_;
-    ComPtr<ID3D12DescriptorHeap> srvDescriptorHeap_;
-
-    uint32_t descriptorSizeSRV_ = 0;
-    uint32_t descriptorSizeRTV_ = 0;
-    uint32_t descriptorSizeDSV_ = 0;
-
-    ComPtr<ID3D12Resource> swapChainResources_[2];
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles_[2]{};
-
-    ComPtr<ID3D12Fence> fence_;
-    uint64_t fenceValue_ = 0;
-    HANDLE fenceEvent_ = nullptr;
-
-    // DXC / Pipeline 関連
-    ComPtr<IDxcUtils> dxcUtils_;
-    ComPtr<IDxcCompiler3> dxcCompiler_;
-    ComPtr<IDxcIncludeHandler> includeHandler_;
+    // Pipeline 関連
     ComPtr<ID3D12RootSignature> rootSignature_;
     ComPtr<ID3D12RootSignature> particleRootSignature_;
     ComPtr<ID3D12PipelineState> graphicsPipelineState_;
@@ -187,12 +155,6 @@ private:
 
     ComPtr<ID3D12Resource> textureResource2_;
     D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2_{};
-
-    ComPtr<ID3D12Resource> depthStencilResource_;
-
-    // ビューポート・シザー
-    D3D12_VIEWPORT viewport_{};
-    D3D12_RECT scissorRect_{};
 
     // ゲーム状態・UI制御用変数
     Transform transform_{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };

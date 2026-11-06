@@ -2,12 +2,15 @@
 
 #include <array>
 #include <Windows.h>
+#include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <string>
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <dxcapi.h>
 #include <wrl.h>
+#include "externals/DirectXTex/DirectXTex.h"
 #include "WinApp.h"
 
 class DirectXManager {
@@ -16,11 +19,15 @@ public:
     void Finalize();
     void PreDraw();
     void PostDraw();
+    Microsoft::WRL::ComPtr<IDxcBlob> CompileShader(const std::wstring& filePath, const wchar_t* profile);
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(size_t sizeInBytes);
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateTextureResource(const DirectX::TexMetadata& metadata);
+    static DirectX::ScratchImage LoadTexture(const std::string& filePath);
 
-    Microsoft::WRL::ComPtr<ID3D12Device>& GetDevice() { return device_; }
+    ID3D12Device* GetDevice() const { return device_.Get(); }
     Microsoft::WRL::ComPtr<ID3D12CommandQueue>& GetCommandQueue() { return commandQueue_; }
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& GetCommandAllocator() { return commandAllocator_; }
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& GetCommandList() { return commandList_; }
+    ID3D12GraphicsCommandList* GetCommandList() const { return commandList_.Get(); }
     Microsoft::WRL::ComPtr<IDXGISwapChain4>& GetSwapChain() { return swapChain_; }
 
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& GetRtvDescriptorHeap() { return rtvDescriptorHeap_; }
@@ -40,10 +47,6 @@ public:
     Microsoft::WRL::ComPtr<ID3D12Fence>& GetFence() { return fence_; }
     uint64_t& GetFenceValue() { return fenceValue_; }
     HANDLE GetFenceEvent() const { return fenceEvent_; }
-
-    Microsoft::WRL::ComPtr<IDxcUtils>& GetDxcUtils() { return dxcUtils_; }
-    Microsoft::WRL::ComPtr<IDxcCompiler3>& GetDxcCompiler() { return dxcCompiler_; }
-    Microsoft::WRL::ComPtr<IDxcIncludeHandler>& GetIncludeHandler() { return includeHandler_; }
 
     Microsoft::WRL::ComPtr<ID3D12Resource>& GetDepthStencilResource() { return depthStencilResource_; }
     D3D12_VIEWPORT& GetViewport() { return viewport_; }
@@ -77,6 +80,7 @@ private:
     void InitializeImGui();
 
     WinApp* winApp_ = nullptr;
+    std::ofstream* logStream_ = nullptr;
     Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory_;
     Microsoft::WRL::ComPtr<IDXGIAdapter4> useAdapter_;
     Microsoft::WRL::ComPtr<ID3D12Device> device_;

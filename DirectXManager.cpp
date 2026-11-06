@@ -16,8 +16,10 @@
 using namespace Microsoft::WRL;
 
 #include <cassert>
+#include <cstdint>
 #include <format>
 #include <string>
+#include <thread>
 #include <dbghelp.h>
 #include "externals/DirectXTex/d3dx12.h"
 
@@ -164,6 +166,7 @@ void DirectXManager::Initialize(WinApp* winApp, std::ofstream& logStream) {
     assert(winApp != nullptr);
     this->winApp_ = winApp;
     logStream_ = &logStream;
+    InitializeFixFPS();
     InitializeDevice(logStream);
     InitializeCommand();
     InitializeSwapChain();
@@ -207,6 +210,35 @@ void DirectXManager::InitializeDXC() {
     assert(SUCCEEDED(hr));
     hr = dxcUtils_->CreateDefaultIncludeHandler(&includeHandler_);
     assert(SUCCEEDED(hr));
+}
+
+void DirectXManager::InitializeFixFPS() {
+	reference_ = std::chrono::steady_clock::now();
+}
+
+void DirectXManager::UpdateFixFPS() {
+	// 1フレーム分の時間（約1/60秒）
+	const std::chrono::microseconds kMinTime(uint64_t(1000000.0f / 60.0f));
+	// 次のスライドで使用する、1/60秒よりわずかに短い時間
+	const std::chrono::microseconds kMinCheckTime(uint64_t(1000000.0f / 65.0f));
+	(void)kMinCheckTime;
+
+	// 現在時間を取得する
+	std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+	// 前回記録からの経過時間を取得する
+	std::chrono::microseconds elapsed =
+		std::chrono::duration_cast<std::chrono::microseconds>(now - reference_);
+
+	// 1/60秒経過していない場合
+	if (elapsed < kMinTime) {
+		// 1/60秒経過するまで短いスリープを繰り返す
+		while (std::chrono::steady_clock::now() - reference_ < kMinTime) {
+			std::this_thread::sleep_for(std::chrono::microseconds(1));
+		}
+	}
+
+	// 現在時間を記録する
+	reference_ = std::chrono::steady_clock::now();
 }
 
 void DirectXManager::InitializeDepthBuffer() {
@@ -296,6 +328,8 @@ void DirectXManager::PostDraw() {
         assert(SUCCEEDED(hr));
         WaitForSingleObject(fenceEvent_, INFINITE);
     }
+
+    UpdateFixFPS();
 
     hr = commandAllocator_->Reset();
     assert(SUCCEEDED(hr));

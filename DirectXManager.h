@@ -14,6 +14,8 @@ class DirectXManager {
 public:
     void Initialize(WinApp* winApp, std::ofstream& logStream);
     void Finalize();
+    void PreDraw();
+    void PostDraw();
 
     Microsoft::WRL::ComPtr<ID3D12Device>& GetDevice() { return device_; }
     Microsoft::WRL::ComPtr<ID3D12CommandQueue>& GetCommandQueue() { return commandQueue_; }

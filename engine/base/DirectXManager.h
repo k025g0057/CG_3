@@ -11,7 +11,7 @@
 #include <dxgi1_6.h>
 #include <dxcapi.h>
 #include <wrl.h>
-#include "externals/DirectXTex/DirectXTex.h"
+#include "DirectXTex.h"
 #include "WinApp.h"
 
 class DirectXManager {

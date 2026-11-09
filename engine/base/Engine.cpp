@@ -14,12 +14,12 @@
 #include <numbers>
 #include <sstream>
 #include <strsafe.h>
-#include "externals/DirectXTex/d3dx12.h"
+#include "d3dx12.h"
 
 #ifdef USE_IMGUI
-#include "externals/imgui/imgui.h"
-#include "externals/imgui/imgui_impl_dx12.h"
-#include "externals/imgui/imgui_impl_win32.h"
+#include "imgui.h"
+#include "imgui_impl_dx12.h"
+#include "imgui_impl_win32.h"
 #endif
 
 // ★ 3. ImGuiに必要なヘッダーファイルとWndProcハンドラを読み込む
@@ -134,7 +134,7 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* direc
 
     // サウンドの初期化と読み込み
     sound.Initialize();
-    soundData1 = sound.SoundLoadWave("Resources/botan.wav");
+    soundData1 = sound.SoundLoadWave("resources/botan.wav");
 
     input = new Input();
     input->Initialize(&winApp_);
@@ -294,8 +294,8 @@ void Engine::InitializePipeline() {
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
-    ComPtr<IDxcBlob> vertexShaderBlob = directXManager_->CompileShader(L"Object3D.VS.hlsl", L"vs_6_0");
-    ComPtr<IDxcBlob> pixelShaderBlob = directXManager_->CompileShader(L"Object3D.PS.hlsl", L"ps_6_0");
+    ComPtr<IDxcBlob> vertexShaderBlob = directXManager_->CompileShader(L"resources/shaders/Object3d.VS.hlsl", L"vs_6_0");
+    ComPtr<IDxcBlob> pixelShaderBlob = directXManager_->CompileShader(L"resources/shaders/Object3d.PS.hlsl", L"ps_6_0");
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
     graphicsPipelineStateDesc.pRootSignature = rootSignature_.Get();
@@ -325,8 +325,8 @@ void Engine::InitializePipeline() {
     // -------------------------------------------------------------------
     // ★ 追加：Particle (インスタンシング) 用 PSO の作成
     // -------------------------------------------------------------------
-    ComPtr<IDxcBlob> particleVSBlob = directXManager_->CompileShader(L"Particle.VS.hlsl", L"vs_6_0");
-    ComPtr<IDxcBlob> particlePSBlob = directXManager_->CompileShader(L"Particle.PS.hlsl", L"ps_6_0");
+    ComPtr<IDxcBlob> particleVSBlob = directXManager_->CompileShader(L"resources/shaders/Particle.VS.hlsl", L"vs_6_0");
+    ComPtr<IDxcBlob> particlePSBlob = directXManager_->CompileShader(L"resources/shaders/Particle.PS.hlsl", L"ps_6_0");
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC particlePsoDesc = graphicsPipelineStateDesc;
     particlePsoDesc.pRootSignature = particleRootSignature_.Get(); // インスタンシング用のルートシグネチャをセット

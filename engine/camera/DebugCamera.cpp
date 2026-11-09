@@ -3,7 +3,7 @@
 #include <cmath>
 #include <algorithm>
 #ifdef USE_IMGUI
-#include "externals/imgui/imgui.h"
+#include "imgui.h"
 #endif
 
 void DebugCamera::Initialize(Input* input) {

@@ -60,6 +60,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)engine\base;$(ProjectDir)engine\input;$(ProjectDir)engine\audio;$(ProjectDir)engine\camera;$(ProjectDir)engine\utility;$(ProjectDir)externals\DirectXTex;$(ProjectDir)externals\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -86,6 +87,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)engine\base;$(ProjectDir)engine\input;$(ProjectDir)engine\audio;$(ProjectDir)engine\camera;$(ProjectDir)engine\utility;$(ProjectDir)externals\DirectXTex;$(ProjectDir)externals\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -109,6 +111,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Development|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)engine\base;$(ProjectDir)engine\input;$(ProjectDir)engine\audio;$(ProjectDir)engine\camera;$(ProjectDir)engine\utility;$(ProjectDir)externals\DirectXTex;$(ProjectDir)externals\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -134,16 +137,16 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DebugCamera.cpp">
+    <ClCompile Include="engine\camera\DebugCamera.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">USE_IMGUI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="Engine.cpp">
+    <ClCompile Include="engine\base\Engine.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="D3DResourceLeakChecker.cpp" />
+    <ClCompile Include="engine\base\D3DResourceLeakChecker.cpp" />
     <ClCompile Include="externals\imgui\imgui.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
@@ -172,26 +175,26 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="Input.cpp">
+    <ClCompile Include="engine\input\Input.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="engine\application\main.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">USE_IMGUI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="Sound.cpp">
+    <ClCompile Include="engine\audio\Sound.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="WinApp.cpp" />
-    <ClCompile Include="DirectXManager.cpp" />
-    <ClCompile Include="Logger.cpp" />
-    <ClCompile Include="StringUtility.cpp" />
+    <ClCompile Include="engine\base\WinApp.cpp" />
+    <ClCompile Include="engine\base\DirectXManager.cpp" />
+    <ClCompile Include="engine\utility\Logger.cpp" />
+    <ClCompile Include="engine\utility\StringUtility.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Object3d.PS.hlsl">
+    <FxCompile Include="resources\shaders\Object3d.PS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Development|x64'">Pixel</ShaderType>
@@ -199,7 +202,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Object3d.VS.hlsl">
+    <FxCompile Include="resources\shaders\Object3d.VS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Development|x64'">Vertex</ShaderType>
@@ -207,7 +210,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Particle.VS.hlsl">
+    <FxCompile Include="resources\shaders\Particle.VS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Development|x64'">Vertex</ShaderType>
@@ -215,7 +218,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Particle.PS.hlsl">
+    <FxCompile Include="resources\shaders\Particle.PS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Development|x64'">Pixel</ShaderType>
@@ -225,9 +228,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DebugCamera.h" />
-    <ClInclude Include="Engine.h" />
-    <ClInclude Include="D3DResourceLeakChecker.h" />
+    <ClInclude Include="engine\camera\DebugCamera.h" />
+    <ClInclude Include="engine\base\Engine.h" />
+    <ClInclude Include="engine\base\D3DResourceLeakChecker.h" />
     <ClInclude Include="externals\imgui\imconfig.h" />
     <ClInclude Include="externals\imgui\imgui.h" />
     <ClInclude Include="externals\imgui\imgui_impl_dx12.h" />
@@ -236,13 +239,13 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="externals\imgui\imstb_rectpack.h" />
     <ClInclude Include="externals\imgui\imstb_textedit.h" />
     <ClInclude Include="externals\imgui\imstb_truetype.h" />
-    <ClInclude Include="Input.h" />
-    <ClInclude Include="MathTypes.h" />
-    <ClInclude Include="Sound.h" />
-    <ClInclude Include="WinApp.h" />
-    <ClInclude Include="DirectXManager.h" />
-    <ClInclude Include="Logger.h" />
-    <ClInclude Include="StringUtility.h" />
+    <ClInclude Include="engine\input\Input.h" />
+    <ClInclude Include="engine\base\MathTypes.h" />
+    <ClInclude Include="engine\audio\Sound.h" />
+    <ClInclude Include="engine\base\WinApp.h" />
+    <ClInclude Include="engine\base\DirectXManager.h" />
+    <ClInclude Include="engine\utility\Logger.h" />
+    <ClInclude Include="engine\utility\StringUtility.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />
@@ -253,8 +256,24 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Object3d.hlsli" />
-    <None Include="Particle.hlsli" />
+    <None Include="resources\shaders\Object3d.hlsli" />
+    <None Include="resources\shaders\Particle.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\axis.mtl" />
+    <None Include="resources\axis.obj" />
+    <None Include="resources\botan.wav" />
+    <None Include="resources\monsterBall.png" />
+    <None Include="resources\multiMaterial.mtl" />
+    <None Include="resources\multiMaterial.obj" />
+    <None Include="resources\multiMesh.mtl" />
+    <None Include="resources\multiMesh.obj" />
+    <None Include="resources\plane.mtl" />
+    <None Include="resources\plane.obj" />
+    <None Include="resources\uvChecker.png" />
+    <None Include="resources\fence\fence.mtl" />
+    <None Include="resources\fence\fence.obj" />
+    <None Include="resources\fence\fence.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -7,7 +7,7 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <dxcapi.h>
-#include "externals/DirectXTex/DirectXTex.h"
+#include "DirectXTex.h"
 #include <vector>
 #include <wrl.h>
 #include "Sound.h"

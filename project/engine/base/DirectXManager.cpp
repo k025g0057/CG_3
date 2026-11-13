@@ -263,6 +263,28 @@ void DirectXManager::InitializeImGui() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImFontConfig fontConfig{};
+    fontConfig.FontNo = 0;
+    fontConfig.OversampleH = 2;
+    fontConfig.OversampleV = 2;
+    ImFont* japaneseFont = io.Fonts->AddFontFromFileTTF(
+        "C:/Windows/Fonts/meiryo.ttc",
+        16.0f,
+        &fontConfig,
+        io.Fonts->GetGlyphRangesJapanese());
+    if (japaneseFont == nullptr) {
+        japaneseFont = io.Fonts->AddFontFromFileTTF(
+            "C:/Windows/Fonts/msgothic.ttc",
+            16.0f,
+            &fontConfig,
+            io.Fonts->GetGlyphRangesJapanese());
+    }
+    assert(japaneseFont != nullptr && "Japanese ImGui font could not be loaded");
+    io.FontDefault = japaneseFont;
+    io.Fonts->Build();
+
     ImGui_ImplWin32_Init(winApp_->GetHwnd());
     ImGui_ImplDX12_Init(
         device_.Get(),
@@ -271,8 +293,6 @@ void DirectXManager::InitializeImGui() {
         srvDescriptorHeap_.Get(),
         srvDescriptorHeap_->GetCPUDescriptorHandleForHeapStart(),
         srvDescriptorHeap_->GetGPUDescriptorHandleForHeapStart());
-    ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->Build();
 #endif
 }
 
@@ -291,7 +311,7 @@ void DirectXManager::PreDraw() {
     D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptorHeap_->GetCPUDescriptorHandleForHeapStart();
     commandList_->OMSetRenderTargets(1, &rtvHandle, false, &dsvHandle);
 
-    const float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
+    const float clearColor[] = { 0.004f, 0.008f, 0.028f, 1.0f };
     commandList_->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
     commandList_->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 

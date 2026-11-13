@@ -35,6 +35,10 @@ struct TransformationMatrix {
 struct Particle {
     Transform transform;
     Vector3 velocity;
+    float tailPhase = 0.0f;
+    float size = 0.04f;
+    float life = 0.0f;
+    float maxLife = 0.0f;
 };
 
 struct VertexData {
@@ -104,6 +108,7 @@ private:
     ComPtr<ID3D12RootSignature> rootSignature_;
     ComPtr<ID3D12RootSignature> particleRootSignature_;
     ComPtr<ID3D12PipelineState> graphicsPipelineState_;
+    ComPtr<ID3D12PipelineState> legacyParticlePipelineState_;
 
     // 描画リソース・状態
     ModelData modelData_;
@@ -131,7 +136,10 @@ private:
     ComPtr<ID3D12Resource> instancingResource_;
     TransformationMatrix* instancingData_ = nullptr;
 
-    static constexpr uint32_t kNumInstance = 10;
+    static constexpr uint32_t kNumInstance = 640;
+    static constexpr uint32_t kNumLegacyInstance = 10;
+    static constexpr uint32_t kNumHeadParticle = 32;
+    static constexpr uint32_t kNumTailStrands = 6;
     Particle particles[kNumInstance]{};
 
     ComPtr<ID3D12Resource> transformationMatrixResourceSprite_;
@@ -157,9 +165,12 @@ private:
     Vector3 modelRotateDeg_ = { 0.0f, 0.0f, 0.0f };
     Matrix4x4 projectionMatrix_{};
 
-    bool drawSphere_ = false;
-    bool updateParticles_ = false;
+    bool drawMeteorHead_ = true;
+    bool updateParticles_ = true;
     bool useMonsterBall_ = true;
+    int renderMode_ = 1; // 0: 以前の10枚描画、1: 流れ星
+    bool cometExploded_ = false;
+    float effectTime_ = 0.0f;
 
     Sound sound;
     SoundData soundData1;

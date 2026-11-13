@@ -65,6 +65,8 @@
   <ItemGroup>
     <None Include="resources\shaders\Object3d.hlsli"><Filter>resources\shaders</Filter></None>
     <None Include="resources\shaders\Particle.hlsli"><Filter>resources\shaders</Filter></None>
+    <None Include="resources\shaders\Comet.PS.hlsl"><Filter>resources\shaders</Filter></None>
+    <None Include="resources\shaders\LegacyParticle.PS.hlsl"><Filter>resources\shaders</Filter></None>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\axis.mtl"><Filter>resources</Filter></None>

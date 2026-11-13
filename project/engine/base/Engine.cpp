@@ -7,6 +7,7 @@
 #include "Logger.h"
 #include "StringUtility.h"
 #include <cassert>
+#include <algorithm>
 #include <chrono>
 #include <dbghelp.h>
 #include <filesystem>
@@ -29,6 +30,13 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 #endif
 
 #include <cmath>
+
+namespace {
+float Hash01(uint32_t seed) {
+    const float value = std::sin(static_cast<float>(seed) * 12.9898f) * 43758.5453f;
+    return value - std::floor(value);
+}
+}
 
 #pragma comment(lib, "Dbghelp.lib")
 
@@ -119,16 +127,59 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* direc
     InitializePipeline();
     InitializeResources();
 
-    // ParticleのTransformと速度を初期化する
+    // 彗星の核と尾の粒子を初期化する
+    transform_.scale = { 0.32f, 0.32f, 0.32f };
+    materialData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
     for (uint32_t index = 0; index < kNumInstance; ++index) {
-        particles[index].transform.scale = { 1.0f, 1.0f, 1.0f };
-        particles[index].transform.rotate = { 0.0f, 0.0f, 0.0f };
-        particles[index].transform.translate = {
-            index * 0.15f,
-            index * -0.1f,
-            index * 0.5f
+        const float angle = static_cast<float>(index) * 2.39996323f;
+        const uint32_t track = index < kNumHeadParticle
+            ? index % 3
+            : (index - kNumHeadParticle) % kNumTailStrands;
+        float tailPosition = 0.0f;
+        if (index < kNumHeadParticle) {
+            // 前面半球に粒子を散らし、小さくした岩の核を発光粒子で覆う
+            const float hemisphere = (static_cast<float>(index) + 0.5f) / static_cast<float>(kNumHeadParticle);
+            const float z = -(0.08f + hemisphere * 0.90f);
+            const float ring = std::sqrt((std::max)(0.0f, 1.0f - z * z));
+            const float radius = 0.25f;
+            particles[index].tailPhase = hemisphere;
+            particles[index].size = 0.075f + Hash01(index + 17) * 0.055f;
+            particles[index].transform.scale = {
+                particles[index].size * 1.45f,
+                particles[index].size * 1.45f,
+                particles[index].size
+            };
+            particles[index].transform.translate = {
+                transform_.translate.x + std::cos(angle) * ring * radius,
+                transform_.translate.y + std::sin(angle) * ring * radius,
+                transform_.translate.z + z * radius
+            };
+        } else {
+            tailPosition = (static_cast<float>(index - kNumHeadParticle) + 0.5f)
+                / static_cast<float>(kNumInstance - kNumHeadParticle);
+            const float taper = 1.0f - tailPosition;
+            const float spread = 0.004f + taper * 0.008f;
+            const float trackOffset = (static_cast<float>(track) - 2.5f) * (0.055f * taper + 0.006f);
+            particles[index].tailPhase = tailPosition;
+            particles[index].size = 0.030f + Hash01(index + 17) * 0.050f;
+            particles[index].transform.scale = {
+                particles[index].size * (2.8f - tailPosition * 1.6f),
+                particles[index].size * (1.2f - tailPosition * 0.95f),
+                particles[index].size
+            };
+            particles[index].transform.translate = {
+                transform_.translate.x + 0.12f + tailPosition * 4.6f - trackOffset * 0.573f,
+                transform_.translate.y + 0.08f + tailPosition * 3.2f + trackOffset * 0.819f + std::sin(angle) * spread,
+                transform_.translate.z + (static_cast<float>(track) - 2.5f) * (0.025f * taper + 0.003f)
+                    + std::cos(angle) * spread * 0.32f
+            };
+        }
+        particles[index].transform.rotate = {
+            0.0f,
+            0.0f,
+            index < kNumHeadParticle ? 0.0f : 0.61f
         };
-        particles[index].velocity = { 0.0f, 1.0f, 0.0f };
+        particles[index].velocity = { 0.0f, 0.0f, 0.0f };
     }
 
 
@@ -332,9 +383,26 @@ void Engine::InitializePipeline() {
     particlePsoDesc.pRootSignature = particleRootSignature_.Get(); // インスタンシング用のルートシグネチャをセット
     particlePsoDesc.VS = { particleVSBlob->GetBufferPointer(), particleVSBlob->GetBufferSize() };
     particlePsoDesc.PS = { particlePSBlob->GetBufferPointer(), particlePSBlob->GetBufferSize() };
+    particlePsoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
+    particlePsoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+    particlePsoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
+    particlePsoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    particlePsoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    particlePsoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ONE;
+    particlePsoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    particlePsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
 
     hr = directXManager_->GetDevice()->CreateGraphicsPipelineState(&particlePsoDesc, IID_PPV_ARGS(&particlePipelineState_));
     assert(SUCCEEDED(hr));
+
+    ComPtr<IDxcBlob> legacyParticlePSBlob = directXManager_->CompileShader(L"resources/shaders/LegacyParticle.PS.hlsl", L"ps_6_0");
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC legacyParticlePsoDesc = graphicsPipelineStateDesc;
+    legacyParticlePsoDesc.pRootSignature = particleRootSignature_.Get();
+    legacyParticlePsoDesc.VS = { particleVSBlob->GetBufferPointer(), particleVSBlob->GetBufferSize() };
+    legacyParticlePsoDesc.PS = { legacyParticlePSBlob->GetBufferPointer(), legacyParticlePSBlob->GetBufferSize() };
+    hr = directXManager_->GetDevice()->CreateGraphicsPipelineState(&legacyParticlePsoDesc, IID_PPV_ARGS(&legacyParticlePipelineState_));
+    assert(SUCCEEDED(hr));
+
 }
 
 void Engine::InitializeResources() {
@@ -584,15 +652,119 @@ void Engine::Run() {
 
 void Engine::Update() {
     const float kDeltaTime = 1.0f / 60.0f;
-    if (updateParticles_) {
+    input->Update();
+
+    if (input->TriggerKey(DIK_SPACE) && renderMode_ == 1 && !cometExploded_) {
+        cometExploded_ = true;
         for (uint32_t index = 0; index < kNumInstance; ++index) {
-            particles[index].transform.translate.x += particles[index].velocity.x * kDeltaTime;
-            particles[index].transform.translate.y += particles[index].velocity.y * kDeltaTime;
-            particles[index].transform.translate.z += particles[index].velocity.z * kDeltaTime;
+            const float z = Hash01(index + 1000) * 2.0f - 1.0f;
+            const float angle = Hash01(index + 2000) * 2.0f * std::numbers::pi_v<float>;
+            const float ring = std::sqrt((std::max)(0.0f, 1.0f - z * z));
+            const Vector3 direction = { ring * std::cos(angle), z, ring * std::sin(angle) };
+            const float speed = 2.2f + Hash01(index + 3000) * 3.8f;
+
+            particles[index].transform.translate = {
+                transform_.translate.x + direction.x * 0.38f,
+                transform_.translate.y + direction.y * 0.38f,
+                transform_.translate.z + direction.z * 0.38f
+            };
+            particles[index].velocity = {
+                direction.x * speed,
+                direction.y * speed,
+                direction.z * speed
+            };
+            particles[index].life = 1.0f + Hash01(index + 4000) * 1.4f;
+            particles[index].maxLife = particles[index].life;
+            particles[index].transform.scale = {
+                particles[index].size * 1.8f,
+                particles[index].size * 1.8f,
+                particles[index].size * 1.8f
+            };
         }
     }
 
-    input->Update();
+    if (renderMode_ == 0) {
+        // 前回までの動作：plane.objを10個、少しずつずらして描画
+        materialData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        for (uint32_t index = 0; index < kNumLegacyInstance; ++index) {
+            particles[index].transform.scale = { 1.0f, 1.0f, 1.0f };
+            particles[index].transform.rotate = { 0.0f, 0.0f, 0.0f };
+            particles[index].transform.translate = {
+                index * 0.1f,
+                index * 0.1f,
+                index * 0.1f
+            };
+        }
+    } else if (cometExploded_) {
+        for (uint32_t index = 0; index < kNumInstance; ++index) {
+            Particle& particle = particles[index];
+            particle.life = (std::max)(0.0f, particle.life - kDeltaTime);
+            if (particle.life > 0.0f) {
+                particle.transform.translate.x += particle.velocity.x * kDeltaTime;
+                particle.transform.translate.y += particle.velocity.y * kDeltaTime;
+                particle.transform.translate.z += particle.velocity.z * kDeltaTime;
+                const float drag = (std::max)(0.0f, 1.0f - 0.35f * kDeltaTime);
+                particle.velocity.x *= drag;
+                particle.velocity.y *= drag;
+                particle.velocity.z *= drag;
+                const float scale = particle.size * (0.18f + 1.45f * particle.life / particle.maxLife);
+                particle.transform.scale = { scale, scale, scale };
+            } else {
+                particle.transform.scale = { 0.0f, 0.0f, 0.0f };
+            }
+        }
+    } else {
+        if (updateParticles_) {
+            effectTime_ += kDeltaTime;
+            transform_.translate.x = std::sin(effectTime_ * 0.32f) * 0.85f;
+            transform_.translate.y = std::sin(effectTime_ * 0.21f) * 0.18f;
+        }
+        for (uint32_t index = 0; index < kNumInstance; ++index) {
+            Particle& particle = particles[index];
+            const float angle = static_cast<float>(index) * 2.39996323f + effectTime_ * 2.4f;
+            const float flicker = 0.82f + 0.18f * std::sin(effectTime_ * 14.0f + index * 2.1f);
+
+            if (index < kNumHeadParticle) {
+                const float hemisphere = (static_cast<float>(index) + 0.5f) / static_cast<float>(kNumHeadParticle);
+                const float z = -(0.08f + hemisphere * 0.90f);
+                const float ring = std::sqrt((std::max)(0.0f, 1.0f - z * z));
+                const float radius = 0.25f + 0.015f * std::sin(effectTime_ * 5.0f + index);
+                const float glowSize = particle.size * (1.55f + 0.18f * flicker);
+                particle.transform.scale = { glowSize, glowSize, particle.size };
+                particle.transform.translate = {
+                    transform_.translate.x + std::cos(angle) * ring * radius,
+                    transform_.translate.y + std::sin(angle) * ring * radius,
+                    transform_.translate.z + z * radius
+                };
+                continue;
+            }
+
+            if (updateParticles_) {
+                particle.tailPhase += kDeltaTime * (0.16f + Hash01(index + 5000) * 0.1f);
+                if (particle.tailPhase >= 1.0f) {
+                    particle.tailPhase -= 1.0f;
+                }
+            }
+
+            const float tailAngle = angle + effectTime_ * 0.6f;
+            const float taper = 1.0f - particle.tailPhase;
+            const float spread = 0.004f + taper * 0.008f;
+            const uint32_t track = (index - kNumHeadParticle) % kNumTailStrands;
+            const float trackOffset = (static_cast<float>(track) - 2.5f) * (0.055f * taper + 0.006f);
+            const float streakLength = particle.size * (2.8f - particle.tailPhase * 1.6f) * flicker;
+            const float streakWidth = particle.size * (1.2f - particle.tailPhase * 0.95f) * flicker;
+            particle.transform.scale = { streakLength, streakWidth, particle.size };
+            particle.transform.rotate.z = 0.61f;
+            particle.transform.translate = {
+                transform_.translate.x + 0.12f + particle.tailPhase * 4.6f - trackOffset * 0.573f,
+                transform_.translate.y + 0.08f + particle.tailPhase * 3.2f + trackOffset * 0.819f + std::sin(tailAngle) * spread
+                    + std::sin(effectTime_ * 8.0f + index * 1.7f) * (0.003f + taper * 0.012f),
+                transform_.translate.z + (static_cast<float>(track) - 2.5f) * (0.025f * taper + 0.003f)
+                    + std::cos(tailAngle) * spread * 0.32f
+                    + std::sin(effectTime_ * 6.0f + index * 2.3f) * (0.003f + taper * 0.01f)
+            };
+        }
+    }
 
     if (input->TriggerKey(DIK_0)) {
         OutputDebugStringA("Hit 0\n");
@@ -603,45 +775,15 @@ void Engine::Update() {
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::ShowDemoWindow();
     ImGui::Begin("Settings");
-
-    ImGui::Checkbox("Draw Sphere", &drawSphere_);
-    ImGui::Checkbox("Update", &updateParticles_);
-   
-
-    ImGui::ColorEdit4("color", &materialData_->color.x, ImGuiColorEditFlags_Uint8);
-
-    bool enableLightingBool = (materialData_->enableLighting != 0);
-    if (ImGui::Checkbox("enableLighting", &enableLightingBool)) {
-        materialData_->enableLighting = enableLightingBool ? 1 : 0;
-    }
-
-    ImGui::ColorEdit4("colorSprite", &materialDataSprite_->color.x, ImGuiColorEditFlags_Uint8);
-    ImGui::DragFloat3("translateSprite", &transformSprite_.translate.x, 1.0f);
-    ImGui::Checkbox("useMonsterBall", &useMonsterBall_);
-
-    ImGui::ColorEdit3("LightColor", &directionalLightData_->color.x, ImGuiColorEditFlags_Uint8);
-    if (ImGui::DragFloat3("LightDirection", &directionalLightData_->direction.x, 0.01f, -1.0f, 1.0f)) {
-        float length = std::sqrt(
-            directionalLightData_->direction.x * directionalLightData_->direction.x +
-            directionalLightData_->direction.y * directionalLightData_->direction.y +
-            directionalLightData_->direction.z * directionalLightData_->direction.z
-        );
-        if (length > 0.0f) {
-            directionalLightData_->direction.x /= length;
-            directionalLightData_->direction.y /= length;
-            directionalLightData_->direction.z /= length;
-        }
-    }
-    ImGui::DragFloat("Intensity", &directionalLightData_->intensity, 0.01f, 0.0f, 10.0f);
-
-    ImGui::DragFloat2("UVTranslate", &uvTransformSprite_.translate.x, 0.01f, -10.0f, 10.0f);
-    ImGui::DragFloat2("UVScale", &uvTransformSprite_.scale.x, 0.01f, -10.0f, 10.0f);
-    ImGui::SliderAngle("UVRotate", &uvTransformSprite_.rotate.z);
-
-    if (ImGui::Button("Play Alarm")) {
-        sound.SoundPlayWave(soundData1);
+    const char* renderModes[] = { "前回の描画（plane×10）", "流れ星" };
+    ImGui::Combo("表示モード", &renderMode_, renderModes, IM_ARRAYSIZE(renderModes));
+    if (renderMode_ == 1) {
+        ImGui::Checkbox("流星の明るい先端を表示", &drawMeteorHead_);
+        ImGui::Checkbox("流れ星をアニメーション", &updateParticles_);
+        ImGui::Text("Spaceキーで光が飛び散る");
+    } else {
+        ImGui::Text("plane.objを10個のInstanceで描画します");
     }
 
     ImGui::End();
@@ -665,7 +807,8 @@ void Engine::Update() {
     Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform_.scale, cameraTransform_.rotate, cameraTransform_.translate);
     Matrix4x4 viewMatrix = debugCamera_.GetViewMatrix();
 
-    for (uint32_t index = 0; index < kNumInstance; ++index) {
+    const uint32_t activeInstanceCount = (renderMode_ == 0) ? kNumLegacyInstance : kNumInstance;
+    for (uint32_t index = 0; index < activeInstanceCount; ++index) {
         Matrix4x4 worldMatrix = MakeAffineMatrix(
             particles[index].transform.scale,
             particles[index].transform.rotate,
@@ -693,45 +836,34 @@ void Engine::Update() {
 
 void Engine::Draw() {
     directXManager_->PreDraw();
+    ID3D12GraphicsCommandList* commandList = directXManager_->GetCommandList();
+    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    directXManager_->GetCommandList()->SetGraphicsRootSignature(rootSignature_.Get());
-    directXManager_->GetCommandList()->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
-    directXManager_->GetCommandList()->SetGraphicsRootConstantBufferView(1, wvpResource_->GetGPUVirtualAddress());
-    directXManager_->GetCommandList()->SetGraphicsRootDescriptorTable(2, useMonsterBall_ ? textureSrvHandleGPU2_ : textureSrvHandleGPU_);
-    directXManager_->GetCommandList()->SetGraphicsRootConstantBufferView(3, directionalLightResource_->GetGPUVirtualAddress());
-
-    directXManager_->GetCommandList()->SetPipelineState(graphicsPipelineState_.Get());
-    directXManager_->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    if (drawSphere_) {
-        // チェックが入っているときは球を描画（通常PSO）
-        directXManager_->GetCommandList()->SetGraphicsRootSignature(rootSignature_.Get());
-        directXManager_->GetCommandList()->SetPipelineState(graphicsPipelineState_.Get());
-
-        directXManager_->GetCommandList()->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
-        directXManager_->GetCommandList()->SetGraphicsRootConstantBufferView(1, wvpResource_->GetGPUVirtualAddress());
-        directXManager_->GetCommandList()->SetGraphicsRootDescriptorTable(2, useMonsterBall_ ? textureSrvHandleGPU2_ : textureSrvHandleGPU_);
-        directXManager_->GetCommandList()->SetGraphicsRootConstantBufferView(3, directionalLightResource_->GetGPUVirtualAddress());
-
-        directXManager_->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        directXManager_->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferViewSphere_);
-        directXManager_->GetCommandList()->DrawInstanced(kNumSphereVertices_, 1, 0, 0);
-    }
-    else {
-        // チェックが外れているときは 10個の板をインスタンシング描画（Particle PSO）
-        directXManager_->GetCommandList()->SetGraphicsRootSignature(particleRootSignature_.Get());
-        directXManager_->GetCommandList()->SetPipelineState(particlePipelineState_.Get());
-
-        directXManager_->GetCommandList()->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
-        directXManager_->GetCommandList()->SetGraphicsRootDescriptorTable(1, instancingSrvHandleGPU_);
-        directXManager_->GetCommandList()->SetGraphicsRootDescriptorTable(2, useMonsterBall_ ? textureSrvHandleGPU2_ : textureSrvHandleGPU_);
-        directXManager_->GetCommandList()->SetGraphicsRootConstantBufferView(3, directionalLightResource_->GetGPUVirtualAddress());
-
-        directXManager_->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        directXManager_->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferViewPlane_);
-
-        // 10インスタンス描画
-        directXManager_->GetCommandList()->DrawInstanced(static_cast<UINT>(modelData_.vertices.size()), kNumInstance, 0, 0);
+    // 選択中のモードに対応するParticle用PSOで描画
+    commandList->SetGraphicsRootSignature(particleRootSignature_.Get());
+    commandList->SetPipelineState(
+        renderMode_ == 0 ? legacyParticlePipelineState_.Get() : particlePipelineState_.Get());
+    commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootDescriptorTable(1, instancingSrvHandleGPU_);
+    commandList->SetGraphicsRootDescriptorTable(
+        2, renderMode_ == 0
+            ? (useMonsterBall_ ? textureSrvHandleGPU2_ : textureSrvHandleGPU_)
+            : textureSrvHandleGPU_);
+    commandList->SetGraphicsRootConstantBufferView(3, directionalLightResource_->GetGPUVirtualAddress());
+    commandList->IASetVertexBuffers(0, 1, &vertexBufferViewPlane_);
+    const UINT vertexCount = static_cast<UINT>(modelData_.vertices.size());
+    if (renderMode_ == 0) {
+        commandList->DrawInstanced(vertexCount, kNumLegacyInstance, 0, 0);
+    } else {
+        if (drawMeteorHead_) {
+            commandList->DrawInstanced(vertexCount, kNumHeadParticle, 0, 0);
+        }
+        commandList->DrawInstanced(
+            vertexCount,
+            kNumInstance - kNumHeadParticle,
+            0,
+            kNumHeadParticle
+        );
     }
 
 #ifdef USE_IMGUI

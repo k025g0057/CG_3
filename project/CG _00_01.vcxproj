@@ -270,6 +270,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   <ItemGroup>
     <None Include="resources\shaders\Object3d.hlsli" />
     <None Include="resources\shaders\Particle.hlsli" />
+    <None Include="resources\shaders\Comet.PS.hlsl" />
+    <None Include="resources\shaders\LegacyParticle.PS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\axis.mtl" />

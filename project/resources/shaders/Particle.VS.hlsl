@@ -24,6 +24,7 @@ VertexShaderOutput main(VertexShaderInput input)
    // ★ input.instanceId に修正
     output.position = mul(input.position, gTransformationMatrices[input.instanceId].wvp);
     output.texcoord = input.texcoord;
+    output.instanceId = input.instanceId;
     
     // ★ input.instanceId に修正
     output.normal = normalize(

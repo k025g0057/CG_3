@@ -19,7 +19,7 @@ void WinApp::Initialize(HINSTANCE hInstance, int nCmdShow, WNDPROC windowProc) {
 
     hwnd_ = CreateWindow(
         wc_.lpszClassName,
-        L"CG2",
+        L"LE2C_24_ハヤシ_テルト",
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,

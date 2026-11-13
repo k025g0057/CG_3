@@ -137,8 +137,10 @@ private:
     ComPtr<ID3D12Resource> instancingResource_;
     TransformationMatrix* instancingData_ = nullptr;
 
+    // 流れ星を構成する粒子数。先頭を核、残りを尾として使う
     static constexpr uint32_t kNumInstance = 640;
     static constexpr uint32_t kNumLegacyInstance = 10;
+    // 先端の明るい核に使う粒子数と、尾を分ける筋の数
     static constexpr uint32_t kNumHeadParticle = 32;
     static constexpr uint32_t kNumTailStrands = 6;
     Particle particles[kNumInstance]{};
@@ -166,11 +168,11 @@ private:
     Vector3 modelRotateDeg_ = { 0.0f, 0.0f, 0.0f };
     Matrix4x4 projectionMatrix_{};
 
-    bool drawMeteorHead_ = true;
-    bool updateParticles_ = true;
+    bool drawMeteorHead_ = true; // 流れ星の先端を描画するか
+    bool updateParticles_ = true; // 流れ星を動かすか
     bool useMonsterBall_ = true;
     int renderMode_ = 1; // 0: 以前の10枚描画、1: 流れ星
-    bool cometExploded_ = false;
+    bool cometExploded_ = false; // Spaceキーで粒子が飛び散った状態か
     float effectTime_ = 0.0f;
 
     Sound sound;

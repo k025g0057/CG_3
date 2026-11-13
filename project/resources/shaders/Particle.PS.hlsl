@@ -20,11 +20,13 @@ PixelShaderOutput main(VertexShaderOutput input)
     float halo = 1.0f - smoothstep(0.20f, 1.0f, radius);
     float alpha = saturate(core * 0.78f + halo * 0.40f);
 
+    // 尾のインスタンス番号を0～1にし、先端からの位置として色に使う
     float tailAmount = saturate(((float)input.instanceId - 32.0f) / 608.0f);
     uint track = input.instanceId >= 32 ? (input.instanceId - 32) % 6 : 0;
     float3 cyan = float3(0.12f, 0.92f, 1.0f);
     float3 blue = float3(0.12f, 0.36f, 1.0f);
     float3 violet = float3(0.48f, 0.16f, 0.92f);
+    // tailAmountに応じて水色→青→紫へグラデーションさせる
     float3 color = lerp(cyan, blue, smoothstep(0.08f, 0.58f, tailAmount));
     color = lerp(color, violet, smoothstep(0.64f, 1.0f, tailAmount) * 0.80f);
 
@@ -49,6 +51,7 @@ PixelShaderOutput main(VertexShaderOutput input)
         color = lerp(color, float3(0.86f, 0.98f, 1.0f), core * 0.70f);
     }
 
+    // 核は強く光らせ、尾は後方に行くほど明るさを落とす
     float brightness = input.instanceId < 32 ? 3.0f : lerp(2.4f, 0.85f, tailAmount);
     output.color = float4(color * alpha * brightness, alpha);
     return output;

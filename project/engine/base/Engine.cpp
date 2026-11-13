@@ -139,12 +139,14 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* direc
 }
 
 void Engine::ResetMeteorParticles() {
+    // 流れ星を開始時の位置・大きさ・状態に戻す
     cometExploded_ = false;
     effectTime_ = 0.0f;
     transform_.translate = { 0.0f, 0.0f, 0.0f };
     transform_.scale = { 0.32f, 0.32f, 0.32f };
     materialData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+    // インスタンス番号ごとに、先端の核か尾の粒子かを決めて配置する
     for (uint32_t index = 0; index < kNumInstance; ++index) {
         const float angle = static_cast<float>(index) * 2.39996323f;
         const uint32_t track = index < kNumHeadParticle
@@ -152,6 +154,7 @@ void Engine::ResetMeteorParticles() {
             : (index - kNumHeadParticle) % kNumTailStrands;
 
         if (index < kNumHeadParticle) {
+            // 核の粒子を球状に並べて、明るい丸い先端を作る
             const float hemisphere = (static_cast<float>(index) + 0.5f)
                 / static_cast<float>(kNumHeadParticle);
             const float z = -(0.08f + hemisphere * 0.90f);
@@ -170,6 +173,7 @@ void Engine::ResetMeteorParticles() {
                 transform_.translate.z + z * radius
             };
         } else {
+            // 尾の粒子を複数の筋に分け、後ろほど間隔と太さを細くする
             const float tailPosition = (static_cast<float>(index - kNumHeadParticle) + 0.5f)
                 / static_cast<float>(kNumInstance - kNumHeadParticle);
             const float taper = 1.0f - tailPosition;
@@ -665,6 +669,7 @@ void Engine::Update() {
     input->Update();
 
     if (input->TriggerKey(DIK_SPACE) && renderMode_ == 1 && !cometExploded_) {
+        // 各粒子にランダムな方向・速さ・寿命を与えて飛び散らせる
         cometExploded_ = true;
         for (uint32_t index = 0; index < kNumInstance; ++index) {
             const float z = Hash01(index + 1000) * 2.0f - 1.0f;
@@ -706,6 +711,7 @@ void Engine::Update() {
             };
         }
     } else if (cometExploded_) {
+        // 寿命が残る間は移動させ、抵抗で減速しながら小さくする
         for (uint32_t index = 0; index < kNumInstance; ++index) {
             Particle& particle = particles[index];
             particle.life = (std::max)(0.0f, particle.life - kDeltaTime);
@@ -724,6 +730,7 @@ void Engine::Update() {
             }
         }
     } else {
+        // 通常時は核を揺らし、尾の粒子を先端から後方へ流す
         if (updateParticles_) {
             effectTime_ += kDeltaTime;
             transform_.translate.x = std::sin(effectTime_ * 0.32f) * 0.85f;
@@ -750,6 +757,7 @@ void Engine::Update() {
             }
 
             if (updateParticles_) {
+                // 0～1の尾上の位置を進め、末端に達した粒子を先端側へ戻す
                 particle.tailPhase += kDeltaTime * (0.16f + Hash01(index + 5000) * 0.1f);
                 if (particle.tailPhase >= 1.0f) {
                     particle.tailPhase -= 1.0f;
@@ -763,6 +771,7 @@ void Engine::Update() {
             const float trackOffset = (static_cast<float>(track) - 2.5f) * (0.055f * taper + 0.006f);
             const float streakLength = particle.size * (2.8f - particle.tailPhase * 1.6f) * flicker;
             const float streakWidth = particle.size * (1.2f - particle.tailPhase * 0.95f) * flicker;
+            // 尾の筋に沿って粒子を細長くし、先端側ほど太く見せる
             particle.transform.scale = { streakLength, streakWidth, particle.size };
             particle.transform.rotate.z = 0.61f;
             particle.transform.translate = {

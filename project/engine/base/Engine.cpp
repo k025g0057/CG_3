@@ -128,17 +128,32 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* direc
     InitializeResources();
 
     // 彗星の核と尾の粒子を初期化する
+    ResetMeteorParticles();
+
+    sound.Initialize();
+    soundData1 = sound.SoundLoadWave("resources/botan.wav");
+
+    input = new Input();
+    input->Initialize(&winApp_);
+    debugCamera_.Initialize(input);
+}
+
+void Engine::ResetMeteorParticles() {
+    cometExploded_ = false;
+    effectTime_ = 0.0f;
+    transform_.translate = { 0.0f, 0.0f, 0.0f };
     transform_.scale = { 0.32f, 0.32f, 0.32f };
     materialData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
     for (uint32_t index = 0; index < kNumInstance; ++index) {
         const float angle = static_cast<float>(index) * 2.39996323f;
         const uint32_t track = index < kNumHeadParticle
             ? index % 3
             : (index - kNumHeadParticle) % kNumTailStrands;
-        float tailPosition = 0.0f;
+
         if (index < kNumHeadParticle) {
-            // 前面半球に粒子を散らし、小さくした岩の核を発光粒子で覆う
-            const float hemisphere = (static_cast<float>(index) + 0.5f) / static_cast<float>(kNumHeadParticle);
+            const float hemisphere = (static_cast<float>(index) + 0.5f)
+                / static_cast<float>(kNumHeadParticle);
             const float z = -(0.08f + hemisphere * 0.90f);
             const float ring = std::sqrt((std::max)(0.0f, 1.0f - z * z));
             const float radius = 0.25f;
@@ -155,11 +170,12 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* direc
                 transform_.translate.z + z * radius
             };
         } else {
-            tailPosition = (static_cast<float>(index - kNumHeadParticle) + 0.5f)
+            const float tailPosition = (static_cast<float>(index - kNumHeadParticle) + 0.5f)
                 / static_cast<float>(kNumInstance - kNumHeadParticle);
             const float taper = 1.0f - tailPosition;
             const float spread = 0.004f + taper * 0.008f;
-            const float trackOffset = (static_cast<float>(track) - 2.5f) * (0.055f * taper + 0.006f);
+            const float trackOffset = (static_cast<float>(track) - 2.5f)
+                * (0.055f * taper + 0.006f);
             particles[index].tailPhase = tailPosition;
             particles[index].size = 0.030f + Hash01(index + 17) * 0.050f;
             particles[index].transform.scale = {
@@ -169,29 +185,23 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* direc
             };
             particles[index].transform.translate = {
                 transform_.translate.x + 0.12f + tailPosition * 4.6f - trackOffset * 0.573f,
-                transform_.translate.y + 0.08f + tailPosition * 3.2f + trackOffset * 0.819f + std::sin(angle) * spread,
-                transform_.translate.z + (static_cast<float>(track) - 2.5f) * (0.025f * taper + 0.003f)
-                    + std::cos(angle) * spread * 0.32f
+                transform_.translate.y + 0.08f + tailPosition * 3.2f + trackOffset * 0.819f
+                    + std::sin(angle) * spread,
+                transform_.translate.z + (static_cast<float>(track) - 2.5f)
+                    * (0.025f * taper + 0.003f) + std::cos(angle) * spread * 0.32f
             };
         }
+
         particles[index].transform.rotate = {
             0.0f,
             0.0f,
             index < kNumHeadParticle ? 0.0f : 0.61f
         };
         particles[index].velocity = { 0.0f, 0.0f, 0.0f };
+        particles[index].life = 0.0f;
+        particles[index].maxLife = 0.0f;
     }
-
-
-    // サウンドの初期化と読み込み
-    sound.Initialize();
-    soundData1 = sound.SoundLoadWave("resources/botan.wav");
-
-    input = new Input();
-    input->Initialize(&winApp_);
-    debugCamera_.Initialize(input);
 }
-
 void Engine::InitializeLog() {
     std::filesystem::create_directory("logs");
     auto now = std::chrono::system_clock::now();
@@ -776,14 +786,16 @@ void Engine::Update() {
     ImGui::NewFrame();
 
     ImGui::Begin("Settings");
-    const char* renderModes[] = { "前回の描画（plane×10）", "流れ星" };
+    const char* renderModes[] = { "plane×10", "流れ星" };
     ImGui::Combo("表示モード", &renderMode_, renderModes, IM_ARRAYSIZE(renderModes));
     if (renderMode_ == 1) {
-        ImGui::Checkbox("流星の明るい先端を表示", &drawMeteorHead_);
-        ImGui::Checkbox("流れ星をアニメーション", &updateParticles_);
         ImGui::Text("Spaceキーで光が飛び散る");
     } else {
         ImGui::Text("plane.objを10個のInstanceで描画します");
+    }
+
+    if (ImGui::Button("流れ星を最初から再生")) {
+        ResetMeteorParticles();
     }
 
     ImGui::End();

@@ -86,6 +86,7 @@ private:
     void InitializeLog();
     void InitializePipeline();
     void InitializeResources();
+    void ResetMeteorParticles();
 
     // ループ処理内部
     void Update();

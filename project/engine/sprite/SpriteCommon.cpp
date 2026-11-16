@@ -133,6 +133,17 @@ void SpriteCommon::CreateGraphicsPipelineState() {
 
 void SpriteCommon::CommonDrawSetting() {
 	ID3D12GraphicsCommandList* commandList = directXManager_->GetCommandList();
+
+	// ImGuiの描画後に残るウィンドウ単位のViewport/Scissorを全画面設定に戻す。
+	D3D12_VIEWPORT viewport = directXManager_->GetViewport();
+	D3D12_RECT scissorRect = directXManager_->GetScissorRect();
+	commandList->RSSetViewports(1, &viewport);
+	commandList->RSSetScissorRects(1, &scissorRect);
+
+	// SpriteのテクスチャSRVを使うDescriptorHeapを再設定する。
+	ID3D12DescriptorHeap* descriptorHeap = directXManager_->GetSrvDescriptorHeap().Get();
+	commandList->SetDescriptorHeaps(1, &descriptorHeap);
+
 	commandList->SetGraphicsRootSignature(rootSignature_.Get());
 	commandList->SetPipelineState(graphicsPipelineState_.Get());
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

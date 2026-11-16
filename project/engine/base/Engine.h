@@ -116,16 +116,8 @@ private:
     D3D12_VERTEX_BUFFER_VIEW vertexBufferViewSphere_{};
     uint32_t kNumSphereVertices_ = 0;
 
-    ComPtr<ID3D12Resource> vertexResourceSprite_;
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferViewSprite_{};
-    ComPtr<ID3D12Resource> indexResourceSprite_;
-    D3D12_INDEX_BUFFER_VIEW indexBufferViewSprite_{};
-
     ComPtr<ID3D12Resource> materialResource_;
     Material* materialData_ = nullptr;
-
-    ComPtr<ID3D12Resource> materialResourceSprite_;
-    Material* materialDataSprite_ = nullptr;
 
     ComPtr<ID3D12Resource> wvpResource_;
     TransformationMatrix* wvpData_ = nullptr;
@@ -135,9 +127,6 @@ private:
 
     static constexpr uint32_t kNumInstance = 10;
     Particle particles[kNumInstance]{};
-
-    ComPtr<ID3D12Resource> transformationMatrixResourceSprite_;
-    TransformationMatrix* transformationMatrixDataSprite_ = nullptr;
 
     ComPtr<ID3D12Resource> directionalLightResource_;
     DirectionalLight* directionalLightData_ = nullptr;
@@ -152,7 +141,6 @@ private:
 
     // ゲーム状態・UI制御用変数
     Transform transform_{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
-    Transform transformSprite_{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
     Transform cameraTransform_{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -5.0f} };
     Transform uvTransformSprite_{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
     Vector3 cameraRotateDeg_ = { 0.0f, 0.0f, 0.0f };

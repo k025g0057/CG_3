@@ -149,7 +149,7 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* direc
 
     // このプロジェクトではEngine::Initializeを最初のシーンの初期化として扱う。
     sprite_ = new Sprite();
-    sprite_->Initialize();
+    sprite_->Initialize(spriteCommon_);
 }
 
 void Engine::InitializeLog() {
@@ -407,41 +407,12 @@ void Engine::InitializeResources() {
         }
     }
 
-    // 3. Sprite 頂点・インデックスリソース
-    vertexResourceSprite_ = directXManager_->CreateBufferResource(sizeof(VertexData) * 6);
-    vertexBufferViewSprite_.BufferLocation = vertexResourceSprite_->GetGPUVirtualAddress();
-    vertexBufferViewSprite_.SizeInBytes = sizeof(VertexData) * 6;
-    vertexBufferViewSprite_.StrideInBytes = sizeof(VertexData);
-
-    indexResourceSprite_ = directXManager_->CreateBufferResource(sizeof(uint32_t) * 6);
-    indexBufferViewSprite_.BufferLocation = indexResourceSprite_->GetGPUVirtualAddress();
-    indexBufferViewSprite_.SizeInBytes = sizeof(uint32_t) * 6;
-    indexBufferViewSprite_.Format = DXGI_FORMAT_R32_UINT;
-
-    VertexData* vertexDataSprite = nullptr;
-    vertexResourceSprite_->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataSprite));
-    vertexDataSprite[0] = { { 0.0f, 360.0f, 0.0f, 1.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } };
-    vertexDataSprite[1] = { { 0.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } };
-    vertexDataSprite[2] = { { 640.0f, 360.0f, 0.0f, 1.0f }, { 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } };
-    vertexDataSprite[3] = { { 640.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } };
-
-    uint32_t* indexDataSprite = nullptr;
-    indexResourceSprite_->Map(0, nullptr, reinterpret_cast<void**>(&indexDataSprite));
-    indexDataSprite[0] = 0; indexDataSprite[1] = 1; indexDataSprite[2] = 2;
-    indexDataSprite[3] = 1; indexDataSprite[4] = 3; indexDataSprite[5] = 2;
-
-    // 4. 定数バッファ
+    // 3. 定数バッファ
     materialResource_ = directXManager_->CreateBufferResource(sizeof(Material));
     materialResource_->Map(0, nullptr, reinterpret_cast<void**>(&materialData_));
     materialData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
     materialData_->enableLighting = true;
     materialData_->uvTransform = MakeIdentity4x4();
-
-    materialResourceSprite_ = directXManager_->CreateBufferResource(sizeof(Material));
-    materialResourceSprite_->Map(0, nullptr, reinterpret_cast<void**>(&materialDataSprite_));
-    materialDataSprite_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
-    materialDataSprite_->enableLighting = false;
-    materialDataSprite_->uvTransform = MakeIdentity4x4();
 
     wvpResource_ = directXManager_->CreateBufferResource(sizeof(TransformationMatrix));
     wvpResource_->Map(0, nullptr, reinterpret_cast<void**>(&wvpData_));
@@ -458,11 +429,6 @@ void Engine::InitializeResources() {
         instancingData_[index].wvp = MakeIdentity4x4();
         instancingData_[index].World = MakeIdentity4x4();
     }
-
-    transformationMatrixResourceSprite_ = directXManager_->CreateBufferResource(sizeof(TransformationMatrix));
-    transformationMatrixResourceSprite_->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixDataSprite_));
-    transformationMatrixDataSprite_->wvp = MakeIdentity4x4();
-    transformationMatrixDataSprite_->World = MakeIdentity4x4();
 
     directionalLightResource_ = directXManager_->CreateBufferResource(sizeof(DirectionalLight));
     directionalLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&directionalLightData_));
@@ -628,8 +594,8 @@ void Engine::Update() {
         materialData_->enableLighting = enableLightingBool ? 1 : 0;
     }
 
-    ImGui::ColorEdit4("colorSprite", &materialDataSprite_->color.x, ImGuiColorEditFlags_Uint8);
-    ImGui::DragFloat3("translateSprite", &transformSprite_.translate.x, 1.0f);
+    ImGui::ColorEdit4("colorSprite", &sprite_->GetColor().x, ImGuiColorEditFlags_Uint8);
+    ImGui::DragFloat3("translateSprite", &sprite_->GetTransform().translate.x, 1.0f);
     ImGui::Checkbox("useMonsterBall", &useMonsterBall_);
 
     ImGui::ColorEdit3("LightColor", &directionalLightData_->color.x, ImGuiColorEditFlags_Uint8);
@@ -670,7 +636,7 @@ void Engine::Update() {
 
 
     Matrix4x4 uvTransformMatrix = MakeAffineMatrix(uvTransformSprite_.scale, uvTransformSprite_.rotate, uvTransformSprite_.translate);
-    materialDataSprite_->uvTransform = uvTransformMatrix;
+    sprite_->SetUVTransform(uvTransformMatrix);
 
     Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);
     Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform_.scale, cameraTransform_.rotate, cameraTransform_.translate);
@@ -693,12 +659,7 @@ void Engine::Update() {
     wvpData_->wvp = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix_));
     wvpData_->World = worldMatrix;
 
-    Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite_.scale, transformSprite_.rotate, transformSprite_.translate);
-    Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
-    Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
-    
-    transformationMatrixDataSprite_->wvp = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectionMatrixSprite));
-    transformationMatrixDataSprite_->World = worldMatrixSprite;
+    sprite_->Update();
    
 }
 
@@ -751,7 +712,11 @@ void Engine::Draw() {
 #endif
 
     spriteCommon_->CommonDrawSetting();
-    // TODO: ここにSpriteごとのDraw呼び出しを並べる。
+    // Spriteごとの描画
+    sprite_->Draw(
+        useMonsterBall_ ? textureSrvHandleGPU2_ : textureSrvHandleGPU_,
+        directionalLightResource_->GetGPUVirtualAddress()
+    );
 
     directXManager_->PostDraw();
 }

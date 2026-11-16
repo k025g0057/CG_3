@@ -204,6 +204,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\base\DirectXManager.cpp" />
     <ClCompile Include="engine\utility\Logger.cpp" />
     <ClCompile Include="engine\utility\StringUtility.cpp" />
+    <ClCompile Include="engine\sprite\SpriteCommon.cpp" />
+    <ClCompile Include="engine\sprite\Sprite.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Object3d.PS.hlsl">
@@ -258,6 +260,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\base\DirectXManager.h" />
     <ClInclude Include="engine\utility\Logger.h" />
     <ClInclude Include="engine\utility\StringUtility.h" />
+    <ClInclude Include="engine\sprite\SpriteCommon.h" />
+    <ClInclude Include="engine\sprite\Sprite.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />

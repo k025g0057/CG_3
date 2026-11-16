@@ -8,6 +8,7 @@
     <Filter Include="engine\audio"><UniqueIdentifier>{11E7A5B0-9801-4D73-A101-0C103BE18105}</UniqueIdentifier></Filter>
     <Filter Include="engine\camera"><UniqueIdentifier>{11E7A5B0-9801-4D73-A101-0C103BE18106}</UniqueIdentifier></Filter>
     <Filter Include="engine\utility"><UniqueIdentifier>{11E7A5B0-9801-4D73-A101-0C103BE18107}</UniqueIdentifier></Filter>
+    <Filter Include="engine\sprite"><UniqueIdentifier>{D16FB3AE-A401-4927-B1C3-2B37C5DC4898}</UniqueIdentifier></Filter>
     <Filter Include="resources"><UniqueIdentifier>{11E7A5B0-9801-4D73-A101-0C103BE18108}</UniqueIdentifier></Filter>
     <Filter Include="resources\shaders"><UniqueIdentifier>{11E7A5B0-9801-4D73-A101-0C103BE18109}</UniqueIdentifier></Filter>
     <Filter Include="resources\fence"><UniqueIdentifier>{11E7A5B0-9801-4D73-A101-0C103BE18110}</UniqueIdentifier></Filter>
@@ -25,6 +26,8 @@
     <ClCompile Include="engine\camera\DebugCamera.cpp"><Filter>engine\camera</Filter></ClCompile>
     <ClCompile Include="engine\utility\Logger.cpp"><Filter>engine\utility</Filter></ClCompile>
     <ClCompile Include="engine\utility\StringUtility.cpp"><Filter>engine\utility</Filter></ClCompile>
+    <ClCompile Include="engine\sprite\SpriteCommon.cpp"><Filter>engine\sprite</Filter></ClCompile>
+    <ClCompile Include="engine\sprite\Sprite.cpp"><Filter>engine\sprite</Filter></ClCompile>
     <ClCompile Include="externals\imgui\imgui.cpp"><Filter>externals\imgui</Filter></ClCompile>
     <ClCompile Include="externals\imgui\imgui_demo.cpp"><Filter>externals\imgui</Filter></ClCompile>
     <ClCompile Include="externals\imgui\imgui_draw.cpp"><Filter>externals\imgui</Filter></ClCompile>
@@ -44,6 +47,8 @@
     <ClInclude Include="engine\camera\DebugCamera.h"><Filter>engine\camera</Filter></ClInclude>
     <ClInclude Include="engine\utility\Logger.h"><Filter>engine\utility</Filter></ClInclude>
     <ClInclude Include="engine\utility\StringUtility.h"><Filter>engine\utility</Filter></ClInclude>
+    <ClInclude Include="engine\sprite\SpriteCommon.h"><Filter>engine\sprite</Filter></ClInclude>
+    <ClInclude Include="engine\sprite\Sprite.h"><Filter>engine\sprite</Filter></ClInclude>
     <ClInclude Include="externals\imgui\imconfig.h"><Filter>externals\imgui</Filter></ClInclude>
     <ClInclude Include="externals\imgui\imgui.h"><Filter>externals\imgui</Filter></ClInclude>
     <ClInclude Include="externals\imgui\imgui_impl_dx12.h"><Filter>externals\imgui</Filter></ClInclude>

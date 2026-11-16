@@ -19,6 +19,8 @@
 using Microsoft::WRL::ComPtr;
 
 class Input;
+class Sprite;
+class SpriteCommon;
 
 struct Material {
     Vector4 color;
@@ -64,7 +66,7 @@ public:
     ~Engine() = default;
 
     // エンジンの初期化
-    void Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* directXManager);
+    void Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* directXManager, SpriteCommon* spriteCommon);
     
     // メインループの実行
     void Run();
@@ -165,6 +167,8 @@ private:
     SoundData soundData1;
 
     Input* input = nullptr;
+    Sprite* sprite_ = nullptr;
+    SpriteCommon* spriteCommon_ = nullptr;
 
     DebugCamera debugCamera_;
 

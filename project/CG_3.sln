@@ -34,11 +34,11 @@ Global
 		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Release|x64.ActiveCfg = Release|x64
 		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{371B9FA9-4C90-4AC6-A123-ACED756D6C77} = {A1CDAF65-BD21-44C7-A34D-8E95FD31B003}
-	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77} = {A1CDAF65-BD21-44C7-A34D-8E95FD31B003}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C5FD79BA-7DC7-4544-9048-B20D6B5E0DAE}

@@ -6,6 +6,8 @@
 #include "Input.h"
 #include "Logger.h"
 #include "StringUtility.h"
+#include "../sprite/Sprite.h"
+#include "../sprite/SpriteCommon.h"
 #include <cassert>
 #include <chrono>
 #include <dbghelp.h>
@@ -108,9 +110,11 @@ LRESULT CALLBACK Engine::WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
     return DefWindowProc(hwnd, msg, wparam, lparam);
 }
 
-void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* directXManager) {
+void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* directXManager, SpriteCommon* spriteCommon) {
     directXManager_ = directXManager;
     assert(directXManager_ != nullptr);
+    spriteCommon_ = spriteCommon;
+    assert(spriteCommon_ != nullptr);
     SetUnhandledExceptionFilter(ExportDump);
 
     InitializeLog();
@@ -118,6 +122,9 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* direc
     directXManager_->Initialize(&winApp_, logStream_);
     InitializePipeline();
     InitializeResources();
+
+    // DirectXを含む基盤の準備後に、共有Sprite機能を初期化する。
+    spriteCommon_->Initialize(directXManager_);
 
     // ParticleのTransformと速度を初期化する
     for (uint32_t index = 0; index < kNumInstance; ++index) {
@@ -139,6 +146,10 @@ void Engine::Initialize(HINSTANCE hInstance, int nCmdShow, DirectXManager* direc
     input = new Input();
     input->Initialize(&winApp_);
     debugCamera_.Initialize(input);
+
+    // このプロジェクトではEngine::Initializeを最初のシーンの初期化として扱う。
+    sprite_ = new Sprite();
+    sprite_->Initialize();
 }
 
 void Engine::InitializeLog() {
@@ -739,10 +750,19 @@ void Engine::Draw() {
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), directXManager_->GetCommandList());
 #endif
 
+    spriteCommon_->CommonDrawSetting();
+    // TODO: ここにSpriteごとのDraw呼び出しを並べる。
+
     directXManager_->PostDraw();
 }
 
 void Engine::Finalize() {
+    // Spriteを先に解放し、利用する可能性のある共通部や基盤より長生きさせない。
+    delete sprite_;
+    sprite_ = nullptr;
+    delete spriteCommon_;
+    spriteCommon_ = nullptr;
+
     delete input;
     input = nullptr;
     sound.Finalize();

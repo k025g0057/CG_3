@@ -1,6 +1,7 @@
 #include "Engine.h"
 #include "DirectXManager.h"
 #include "D3DResourceLeakChecker.h"
+#include "../sprite/SpriteCommon.h"
 
 // Windowsアプリのエントリーポイント
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int nCmdShow) {
@@ -9,9 +10,10 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _In
 
     // DirectX基盤クラスを生成し、Engineへ渡す。
     DirectXManager* dxManager = new DirectXManager();
+    SpriteCommon* spriteCommon = new SpriteCommon();
     {
         Engine engine;
-        engine.Initialize(hInstance, nCmdShow, dxManager);
+        engine.Initialize(hInstance, nCmdShow, dxManager, spriteCommon);
         engine.Run();
         engine.Finalize();
     }

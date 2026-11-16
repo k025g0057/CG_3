@@ -1,0 +1,41 @@
+name: CheckUnwantedFiles
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  check:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check for unwanted tracked files
+        shell: pwsh
+        run: |
+          $unwantedPatterns = @(
+            '(^|/)(imgui\.ini|TextFile1\.txt)$'
+          )
+
+          $unwantedFiles = git ls-files | Where-Object {
+            $path = $_ -replace '\\', '/'
+            foreach ($pattern in $unwantedPatterns) {
+              if ($path -match $pattern) {
+                return $true
+              }
+            }
+            return $false
+          }
+
+          if ($unwantedFiles) {
+            Write-Error "Unwanted files are tracked by Git:`n$($unwantedFiles -join "`n")"
+            exit 1
+          }
+
+          Write-Host "No unwanted tracked files were found."

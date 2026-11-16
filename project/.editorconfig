@@ -11,5 +11,5 @@ spelling_use_default_exclusion_dictionary = true
 # 自分の除外辞書を指定
 spelling_exclusion_path = ./exclusion.dic
 
-[externls/**]
+[externals/**]
 generated_code = true

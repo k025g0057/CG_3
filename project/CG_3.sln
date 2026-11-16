@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.6.11806.211
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CG3", "CG _00_01.vcxproj", "{25F32BD3-A71B-48D4-9803-52C9F7AC17C7}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CG3", "CG_00_01.vcxproj", "{25F32BD3-A71B-48D4-9803-52C9F7AC17C7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ソリューション項目", "ソリューション項目", "{2022CB0F-8BAF-F49E-0C48-8EF4C96EC109}"
 	ProjectSection(SolutionItems) = preProject
